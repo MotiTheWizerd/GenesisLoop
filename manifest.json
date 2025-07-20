@@ -1,0 +1,37 @@
+{
+    "manifest_version": 3,
+    "name": "Genesis Loop",
+    "version": "1.0",
+    "description": "Insert predefined text into ChatGPT with a single click",
+    "action": {
+      "default_popup": "popup.html",
+      "default_icon": {
+        "16": "icons/extension_icon_16x16.png",
+        "48": "icons/extension_icon_48x48.png",
+        "128": "icons/extension_icon_128x128.png"
+      }
+    },
+    "icons": {
+      "16": "icons/extension_icon_16x16.png",
+      "48": "icons/extension_icon_48x48.png",
+      "128": "icons/extension_icon_128x128.png"
+    },
+    "permissions": [
+      "storage"
+    ],
+    "host_permissions": [
+      "https://chatgpt.com/*",
+      "https://chat.openai.com/*"
+    ],
+    "content_scripts": [
+      {
+        "matches": [
+          "https://chatgpt.com/*",
+          "https://chat.openai.com/*"
+        ],
+        "js": ["content.js"],
+        "run_at": "document_idle"
+      }
+    ]
+  }
+  
