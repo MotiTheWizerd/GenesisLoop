@@ -1,32 +1,39 @@
 /**
  * Constants used throughout the extension
  */
-const Constants = {
-  // Loop settings
-  MAX_ATTEMPTS: 10,
-  INTERVAL_TIME: 5000, // 5 seconds
+(function() {
+  'use strict';
+  
+  window.Constants = {
+    // Loop settings
+    MAX_ATTEMPTS: 10,
+    INTERVAL_TIME: 8000, // 8 seconds - increased to allow time for responses
 
-  // Button styles
-  BUTTON_STYLES: {
-    position: "fixed",
-    top: "10px",
-    right: "10px",
-    zIndex: "9999",
-    padding: "6px 12px",
-    fontSize: "14px",
-    borderRadius: "6px",
-    border: "none",
-    cursor: "pointer",
-    active: {
-      backgroundColor: "#ef4444",
-      text: "⏸️ Stop Loop"
+    // Button styles
+    BUTTON_STYLES: {
+      position: "fixed",
+      bottom: "20px",
+      right: "20px",
+      zIndex: "99999",
+      padding: "8px 16px",
+      fontSize: "14px",
+      borderRadius: "6px",
+      border: "2px solid #333",
+      cursor: "pointer",
+      fontWeight: "bold",
+      active: {
+        backgroundColor: "#ef4444",
+        text: "⏹️ Stop Auto-Test"
+      },
+      inactive: {
+        backgroundColor: "#10a37f",
+        text: "▶️ Start Auto-Test"
+      }
     },
-    inactive: {
-      backgroundColor: "#10a37f",
-      text: "▶️ Start Loop"
-    }
-  },
 
-  // Default message to send
-  DEFAULT_MESSAGE: "<test>"
-};
+    // Default message to send
+    DEFAULT_MESSAGE: "<test>"
+  };
+  
+  console.log("✅ Constants loaded");
+})();

@@ -47,10 +47,15 @@
   <body>
     <h2>Genesis Loop</h2>
     <div class="description">
-      Click the 🔄 Loop button on ChatGPT to insert text and send it automatically.
+      Click the 🔄 Loop button on ChatGPT to send <code>&lt;test&gt;</code> messages and automatically wait for responses.
     </div>
     <div class="status">
-      Button will appear next to the send button in ChatGPT's interface.
+      Button will appear in the top-right corner of ChatGPT's interface.
+    </div>
+    
+    <div class="response-info">
+      <p>The extension will wait for each ChatGPT response to complete before sending the next message.</p>
+      <button id="view-responses" class="save-btn">View Responses</button>
     </div>
     
     <script src="popup.js"></script>

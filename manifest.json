@@ -32,12 +32,14 @@
         "js": [
           "js/utils/constants.js",
           "js/utils/domUtils.js",
+          "js/utils/responseTracker.js",
+          "js/utils/dependencyLoader.js",
           "js/components/MessageSender.js",
           "js/components/ToggleButton.js",
           "js/components/MessageLoop.js",
           "content.js"
         ],
-        "run_at": "document_idle"
+        "run_at": "document_end"
       }
     ]
   }

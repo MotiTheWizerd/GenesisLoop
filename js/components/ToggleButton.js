@@ -1,41 +1,63 @@
 /**
  * Toggle button component for controlling the message loop
  */
-const ToggleButton = {
+(function() {
+  'use strict';
+  
+  window.ToggleButton = {
   /**
    * Create and append the toggle button to the DOM
    */
   createToggleButton: function() {
+    // Check if critical dependencies are loaded
+    if (typeof window.Constants === 'undefined' || 
+        typeof window.MessageLoop === 'undefined' || 
+        typeof window.DOMUtils === 'undefined' || 
+        typeof window.MessageSender === 'undefined') {
+      console.log("❌ Cannot create toggle button - critical dependencies not loaded");
+      // Try again after a delay, but limit retries
+      if (!this.retryCount) this.retryCount = 0;
+      this.retryCount++;
+      
+      if (this.retryCount < 10) {
+        setTimeout(() => this.createToggleButton(), 1000);
+      } else {
+        console.error("❌ Max retries reached for toggle button creation");
+      }
+      return;
+    }
+    
+    // Reset retry count on success
+    this.retryCount = 0;
+    
     const existing = document.getElementById("genesis-toggle");
     if (existing) return;
 
     const button = document.createElement("button");
     button.id = "genesis-toggle";
-    button.textContent = Constants.BUTTON_STYLES.inactive.text;
+    button.textContent = window.Constants.BUTTON_STYLES.inactive.text;
     
     // Apply styles
     Object.entries({
-      ...Constants.BUTTON_STYLES,
-      backgroundColor: Constants.BUTTON_STYLES.inactive.backgroundColor
+      ...window.Constants.BUTTON_STYLES,
+      backgroundColor: window.Constants.BUTTON_STYLES.inactive.backgroundColor
     }).forEach(([key, value]) => {
       if (typeof value === 'string') {
         button.style[key] = value;
       }
     });
 
-    // Set up click handler
-    let isRunning = false;
+    // Set up click handler - just send test message
     button.onclick = () => {
-      if (isRunning) {
-        MessageLoop.stopLoop();
-        button.textContent = Constants.BUTTON_STYLES.inactive.text;
-        button.style.backgroundColor = Constants.BUTTON_STYLES.inactive.backgroundColor;
-        isRunning = false;
+      console.log("🔘 Button clicked - Sending single test message");
+      
+      // Just send one test message
+      const elements = window.DOMUtils.findRequiredElements();
+      if (elements.success) {
+        console.log("✅ Elements found - Sending test message");
+        window.MessageSender.sendTestMessage();
       } else {
-        MessageLoop.startLoop();
-        button.textContent = Constants.BUTTON_STYLES.active.text;
-        button.style.backgroundColor = Constants.BUTTON_STYLES.active.backgroundColor;
-        isRunning = true;
+        console.log("❌ Elements not found");
       }
     };
 
@@ -47,10 +69,18 @@ const ToggleButton = {
    * Reset the toggle button to inactive state
    */
   resetToggleButton: function() {
+    if (typeof window.Constants === 'undefined') {
+      console.log("❌ Cannot reset toggle button - Constants not loaded");
+      return;
+    }
+    
     const button = document.getElementById("genesis-toggle");
     if (button) {
-      button.textContent = Constants.BUTTON_STYLES.inactive.text;
-      button.style.backgroundColor = Constants.BUTTON_STYLES.inactive.backgroundColor;
+      button.textContent = window.Constants.BUTTON_STYLES.inactive.text;
+      button.style.backgroundColor = window.Constants.BUTTON_STYLES.inactive.backgroundColor;
     }
   }
 };
+
+console.log("✅ ToggleButton loaded");
+})();
