@@ -4,6 +4,7 @@ A Chrome extension that adds a toggle button to ChatGPT pages, allowing users to
 
 ## Project Structure
 
+
 ```
 /
 ├── icons/                  # Extension icon assets

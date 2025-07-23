@@ -4,8 +4,8 @@
 const MessageSender = {
   /**
    * Send a test message to ChatGPT
-   * @param {Function} onFailure Callback to execute if sending fails
-   * @returns {boolean} Whether the message was sent successfully
+   * @pa#dq ==='
+   * turns {boolean} Whether the message was sent successfully
    */
   sendTestMessage: function(onFailure) {
     const elements = DOMUtils.findRequiredElements();

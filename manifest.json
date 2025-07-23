@@ -30,6 +30,11 @@
           "https://chat.openai.com/*"
         ],
         "js": [
+          "js/utils/constants.js",
+          "js/utils/domUtils.js",
+          "js/components/MessageSender.js",
+          "js/components/ToggleButton.js",
+          "js/components/MessageLoop.js",
           "content.js"
         ],
         "run_at": "document_idle"
