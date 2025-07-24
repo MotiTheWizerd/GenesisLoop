@@ -7,9 +7,10 @@
   window.MessageSender = {
     /**
      * Send a test message to ChatGPT
+     * @param {string} message - Optional message to send (defaults to Constants.DEFAULT_MESSAGE)
      * @returns {boolean} Whether the message was sent successfully
      */
-    sendTestMessage: function () {
+    sendTestMessage: function (message) {
       console.log("🚀 MessageSender.sendTestMessage called");
 
       // Check if dependencies are loaded
@@ -29,7 +30,7 @@
       }
 
       try {
-        const textToSend = Constants.DEFAULT_MESSAGE;
+        const textToSend = message || Constants.DEFAULT_MESSAGE;
         console.log(
           "📝 Attempting to send message:",
           textToSend,

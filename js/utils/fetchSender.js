@@ -68,13 +68,15 @@
           }
           
           console.log('✅ FetchSender: Success!', responseData);
-          
-          return {
+          const finalObject = {
             success: true,
             data: responseData,
             status: response.status,
             attempt: attempt
           };
+
+          
+          return finalObject
           
         } catch (error) {
           clearTimeout(timeoutId);
