@@ -31,8 +31,11 @@
         ],
         "js": [
           "js/utils/constants.js",
-          "js/utils/domUtils.js",
           "js/utils/responseTracker.js",
+          "js/utils/dom-utils/responseObserver.js",
+          "js/utils/dom-utils/elementFinder.js",
+          "js/utils/dom-utils/debugUtils.js",
+          "js/utils/dom-utils/index.js",
           "js/utils/dependencyLoader.js",
           "js/components/MessageSender.js",
           "js/components/ToggleButton.js",
@@ -43,4 +46,3 @@
       }
     ]
   }
-  
