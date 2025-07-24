@@ -100,15 +100,30 @@
           );
         };
 
-        // Try the simulation approach first
-        try {
-          console.log("🔤 Trying simulated typing approach");
-          simulateTyping();
-        } catch (typingError) {
-          console.log("⚠️ Simulated typing failed:", typingError);
+        // Check if message is complex and skip simulation
+        const isComplexMessage =
+          textToSend.includes('"') ||
+          textToSend.includes("{") ||
+          textToSend.includes("}");
 
+        if (!isComplexMessage) {
+          // Try the simulation approach first for simple messages
+          try {
+            console.log("🔤 Trying simulated typing approach");
+            simulateTyping();
+          } catch (typingError) {
+            console.log("⚠️ Simulated typing failed:", typingError);
+          }
+        } else {
+          console.log(
+            "🔤 Complex message detected, using direct value setting"
+          );
+        }
+
+        // Use direct value setting for complex messages or if simulation failed
+        if (isComplexMessage) {
           // Fall back to direct value setting
-          console.log("⚠️ Falling back to direct value setting");
+          console.log("⚠️ Using direct value setting for complex message");
 
           // Handle different types of input elements
           if (elements.textarea.tagName === "TEXTAREA") {
@@ -116,6 +131,12 @@
             elements.textarea.value = textToSend;
             elements.textarea.dispatchEvent(
               new Event("input", { bubbles: true })
+            );
+            elements.textarea.dispatchEvent(
+              new Event("change", { bubbles: true })
+            );
+            elements.textarea.dispatchEvent(
+              new Event("keyup", { bubbles: true })
             );
           } else if (
             elements.textarea.getAttribute("contenteditable") === "true" ||
@@ -144,91 +165,58 @@
                 new Event("change", { bubbles: true })
               );
 
-              // Wait a moment to ensure the UI updates before clicking send
+              // Additional events to trigger ChatGPT's validation
+              elements.textarea.dispatchEvent(
+                new Event("keyup", { bubbles: true })
+              );
+              elements.textarea.dispatchEvent(
+                new Event("paste", { bubbles: true })
+              );
+
+              // Wait a moment to ensure the UI updates before sending
               setTimeout(() => {
-                if (
-                  elements.sendButton &&
-                  typeof window.MessageLoop !== "undefined" &&
-                  window.MessageLoop.isRunning
-                ) {
-                  console.log("🖱️ Attempting to click send button...");
-                  console.log("Button disabled?", elements.sendButton.disabled);
-                  console.log(
-                    "Button visible?",
-                    elements.sendButton.offsetParent !== null
-                  );
-
-                  // Try to enable the button if it's disabled
-                  if (elements.sendButton.disabled) {
-                    console.log(
-                      "⚠️ Send button is disabled, trying to enable it"
-                    );
-                    elements.sendButton.disabled = false;
-                  }
-
-                  // Try multiple click approaches
-                  try {
-                    // Method 1: Direct click
-                    elements.sendButton.click();
-                    console.log("✅ Send button clicked via .click()");
-                  } catch (clickError) {
-                    console.error("❌ Direct click failed:", clickError);
-
-                    try {
-                      // Method 2: MouseEvent
-                      elements.sendButton.dispatchEvent(
-                        new MouseEvent("click", {
-                          bubbles: true,
-                          cancelable: true,
-                          view: window,
-                        })
-                      );
-                      console.log("✅ Send button clicked via MouseEvent");
-                    } catch (mouseError) {
-                      console.error("❌ MouseEvent click failed:", mouseError);
-
-                      // Method 3: Try to find and click any child elements
-                      const childElements =
-                        elements.sendButton.querySelectorAll("*");
-                      console.log(
-                        `Trying to click ${childElements.length} child elements`
-                      );
-
-                      for (let i = 0; i < childElements.length; i++) {
-                        try {
-                          childElements[i].click();
-                          console.log(`✅ Clicked child element ${i}`);
-                          break;
-                        } catch (e) {
-                          console.log(`Failed to click child ${i}`);
-                        }
-                      }
-                    }
-                  }
-
-                  // If all click methods failed, try pressing Enter
-                  try {
-                    console.log("🔤 Trying Enter key press as last resort");
-                    elements.textarea.focus();
-                    const enterEvent = new KeyboardEvent("keydown", {
-                      key: "Enter",
-                      code: "Enter",
-                      keyCode: 13,
-                      which: 13,
-                      bubbles: true,
-                      cancelable: true,
-                      ctrlKey: false,
-                      shiftKey: false,
-                    });
-                    elements.textarea.dispatchEvent(enterEvent);
-                    console.log("✅ Enter key pressed");
-                  } catch (enterError) {
-                    console.error("❌ Enter key press failed:", enterError);
-                  }
-                } else {
-                  console.log(
-                    "❌ Cannot click send button - button missing or loop stopped"
-                  );
+                console.log("🔤 NEW APPROACH: Sending message via Enter key press");
+                console.log("🎯 Textarea element:", elements.textarea);
+                console.log("🎯 Textarea focused?", document.activeElement === elements.textarea);
+                console.log("🎯 Textarea content:", elements.textarea.innerText || elements.textarea.value);
+                
+                // Focus the textarea and press Enter
+                try {
+                  console.log("🔍 Focusing textarea...");
+                  elements.textarea.focus();
+                  console.log("🔍 Textarea focused, active element:", document.activeElement);
+                  
+                  // Create Enter key event
+                  console.log("🔍 Creating Enter key event...");
+                  const enterEvent = new KeyboardEvent("keydown", {
+                    key: "Enter",
+                    code: "Enter",
+                    keyCode: 13,
+                    which: 13,
+                    bubbles: true,
+                    cancelable: true,
+                    ctrlKey: false,
+                    shiftKey: false,
+                  });
+                  
+                  console.log("🔍 Dispatching Enter key event...");
+                  const eventResult = elements.textarea.dispatchEvent(enterEvent);
+                  console.log("✅ Enter key event dispatched, result:", eventResult);
+                  
+                  // Also try keyup event
+                  const enterUpEvent = new KeyboardEvent("keyup", {
+                    key: "Enter",
+                    code: "Enter",
+                    keyCode: 13,
+                    which: 13,
+                    bubbles: true,
+                    cancelable: true,
+                  });
+                  elements.textarea.dispatchEvent(enterUpEvent);
+                  console.log("✅ Enter keyup event dispatched");
+                  
+                } catch (enterError) {
+                  console.error("❌ Enter key press failed:", enterError);
                 }
               }, 500);
 
@@ -244,55 +232,65 @@
           }
         }
 
-        // Click the send button immediately for non-ProseMirror cases
+        // Click the send button with delay for non-ProseMirror cases
         console.log("🖱️ Clicking send button for non-ProseMirror case");
 
-        // Try to enable the button if it's disabled
-        if (elements.sendButton.disabled) {
-          console.log("⚠️ Send button is disabled, trying to enable it");
-          elements.sendButton.disabled = false;
-        }
+        setTimeout(() => {
+          // Try to enable the button if it's disabled
+          if (elements.sendButton.disabled) {
+            console.log("⚠️ Send button is disabled, trying to enable it");
+            elements.sendButton.disabled = false;
+          }
 
-        // Try multiple click approaches
-        try {
-          // Method 1: Direct click
-          elements.sendButton.click();
-          console.log("✅ Send button clicked via .click()");
-        } catch (clickError) {
-          console.error("❌ Direct click failed:", clickError);
-
+          // Try multiple click approaches with realistic mouse events
           try {
-            // Method 2: MouseEvent
+            // Simulate realistic mouse interaction sequence
             elements.sendButton.dispatchEvent(
-              new MouseEvent("click", {
-                bubbles: true,
-                cancelable: true,
-                view: window,
-              })
+              new MouseEvent("mousedown", { bubbles: true, cancelable: true })
             );
-            console.log("✅ Send button clicked via MouseEvent");
-          } catch (mouseError) {
-            console.error("❌ MouseEvent click failed:", mouseError);
+            elements.sendButton.dispatchEvent(
+              new MouseEvent("mouseup", { bubbles: true, cancelable: true })
+            );
 
-            // Method 3: Try pressing Enter key
+            // Method 1: Direct click
+            elements.sendButton.click();
+            console.log("✅ Send button clicked via .click()");
+          } catch (clickError) {
+            console.error("❌ Direct click failed:", clickError);
+
             try {
-              console.log("🔤 Trying Enter key press");
-              elements.textarea.focus();
-              const enterEvent = new KeyboardEvent("keydown", {
-                key: "Enter",
-                code: "Enter",
-                keyCode: 13,
-                which: 13,
-                bubbles: true,
-                cancelable: true,
-              });
-              elements.textarea.dispatchEvent(enterEvent);
-              console.log("✅ Enter key pressed");
-            } catch (enterError) {
-              console.error("❌ Enter key press failed:", enterError);
+              // Method 2: MouseEvent
+              elements.sendButton.dispatchEvent(
+                new MouseEvent("click", {
+                  bubbles: true,
+                  cancelable: true,
+                  view: window,
+                })
+              );
+              console.log("✅ Send button clicked via MouseEvent");
+            } catch (mouseError) {
+              console.error("❌ MouseEvent click failed:", mouseError);
+
+              // Method 3: Try pressing Enter key
+              try {
+                console.log("🔤 Trying Enter key press");
+                elements.textarea.focus();
+                const enterEvent = new KeyboardEvent("keydown", {
+                  key: "Enter",
+                  code: "Enter",
+                  keyCode: 13,
+                  which: 13,
+                  bubbles: true,
+                  cancelable: true,
+                });
+                elements.textarea.dispatchEvent(enterEvent);
+                console.log("✅ Enter key pressed");
+              } catch (enterError) {
+                console.error("❌ Enter key press failed:", enterError);
+              }
             }
           }
-        }
+        }, 1000); // 1 second delay to ensure text is recognized
 
         console.log("✅ Sent: <test>");
 
