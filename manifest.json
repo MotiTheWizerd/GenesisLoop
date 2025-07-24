@@ -21,7 +21,8 @@
     ],
     "host_permissions": [
       "https://chatgpt.com/*",
-      "https://chat.openai.com/*"
+      "https://chat.openai.com/*",
+      "http://localhost:8000/*"
     ],
     "content_scripts": [
       {
@@ -32,6 +33,7 @@
         "js": [
           "js/utils/constants.js",
           "js/utils/responseTracker.js",
+          "js/utils/fetchSender.js",
           "js/utils/dom-utils/responseObserver.js",
           "js/utils/dom-utils/elementFinder.js",
           "js/utils/dom-utils/debugUtils.js",
