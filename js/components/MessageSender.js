@@ -325,7 +325,7 @@
 
           console.log("👁️ MutationObserver triggered");
 
-          const tryScan = () => {
+          const tryScan = async () => {
             const assistants = Array.from(
               document.querySelectorAll(
                 '[data-message-author-role="assistant"]'
@@ -357,17 +357,20 @@
                 try {
                   const json = JSON.parse(text);
                   console.log("📦 Parsed:", json);
-                  
+
                   // Send JSON to default address
                   if (window.FetchSender) {
                     try {
                       await window.FetchSender.sendJSON(json);
                       console.log("📡 JSON sent to server successfully");
                     } catch (fetchError) {
-                      console.error("❌ Failed to send JSON to server:", fetchError);
+                      console.error(
+                        "❌ Failed to send JSON to server:",
+                        fetchError
+                      );
                     }
                   }
-                  
+
                   observer.disconnect();
                   resolve(json);
                   return true;
@@ -383,15 +386,15 @@
             return false;
           };
 
-          const retryLoop = () => {
-            if (tryScan()) return;
+          const retryLoop = async () => {
+            if (await tryScan()) return;
 
             retryCount++;
             if (retryCount < MAX_RETRIES) {
               console.log(`🔁 Retry ${retryCount}/${MAX_RETRIES}`);
-              setTimeout(() => {
+              setTimeout(async () => {
                 retryCooldown = false; // 👈 Allow next MutationObserver trigger
-                retryLoop();
+                await retryLoop();
               }, 2000); // 👈 Your desired delay
             } else {
               console.warn("❌ Max retries reached, no valid response found.");
@@ -402,7 +405,7 @@
             }
           };
 
-          retryLoop();
+          retryLoop().catch(console.error);
         });
 
         setTimeout(() => {
