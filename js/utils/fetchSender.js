@@ -177,6 +177,50 @@
     },
 
     /**
+     * Get heartbeat data from server
+     * @param {Object} options - Optional configuration overrides
+     * @returns {Promise<Object>} Heartbeat response
+     */
+    async getHeartbeat(options = {}) {
+      console.log("💓 FetchSender: Getting heartbeat...");
+      
+      const config = { ...this.config, ...options };
+      const heartbeatUrl = config.baseUrl + "heartbeat";
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+      
+      try {
+        const response = await fetch(heartbeatUrl, {
+          method: "GET",
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log("✅ FetchSender: Heartbeat received", data);
+        
+        return {
+          success: true,
+          data: data
+        };
+      } catch (error) {
+        clearTimeout(timeoutId);
+        console.error("❌ FetchSender: Heartbeat failed:", error.message);
+        
+        return {
+          success: false,
+          error: error.message
+        };
+      }
+    },
+
+    /**
      * Test connection to the endpoint
      * @param {Object} options - Optional configuration overrides
      * @returns {Promise<Object>} Connection test result

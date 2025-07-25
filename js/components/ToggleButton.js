@@ -47,17 +47,39 @@
       }
     });
 
-    // Set up click handler - just send test message
+    // Set up click handler - start/stop the message loop
     button.onclick = () => {
-      console.log("🔘 Button clicked - Sending single test message");
+      console.log("🔘 Button clicked - Toggling message loop");
       
-      // Just send one test message
-      const elements = window.DOMUtils.findRequiredElements();
-      if (elements.success) {
-        console.log("✅ Elements found - Sending test message");
-        window.MessageSender.sendTestMessage();
+      // Check if MessageLoop is available
+      if (typeof window.MessageLoop === 'undefined') {
+        console.error("❌ MessageLoop not available");
+        return;
+      }
+      
+      // Toggle the loop
+      if (window.MessageLoop.isRunning) {
+        console.log("⏹️ Stopping message loop");
+        window.MessageLoop.stopLoop();
+        this.resetToggleButton();
       } else {
-        console.log("❌ Elements not found");
+        console.log("▶️ Starting message loop");
+        const elements = window.DOMUtils.findRequiredElements();
+        if (elements.success) {
+          console.log("✅ Elements found - Starting loop");
+          
+          // Update button to active state
+          button.textContent = window.Constants.BUTTON_STYLES.active.text;
+          button.style.backgroundColor = window.Constants.BUTTON_STYLES.active.backgroundColor;
+          
+          // Start the loop
+          window.MessageLoop.startLoop();
+          
+          // Send first message and wait for response
+          window.MessageLoop.waitForFirstResponse();
+        } else {
+          console.log("❌ Elements not found - cannot start loop");
+        }
       }
     };
 

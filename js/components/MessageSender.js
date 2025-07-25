@@ -7,11 +7,18 @@
   window.MessageSender = {
     /**
      * Send a test message to ChatGPT
-     * @param {string} message - Optional message to send (defaults to Constants.DEFAULT_MESSAGE)
+     * @param {string|Function} message - Message to send or callback function for failure
+     * @param {Function} onFailure - Callback function for failure (when message is string)
      * @returns {boolean} Whether the message was sent successfully
      */
-    sendTestMessage: function (message) {
+    sendTestMessage: function (message, onFailure) {
       console.log("🚀 MessageSender.sendTestMessage called");
+
+      // Handle legacy callback parameter (when message is actually a callback)
+      if (typeof message === 'function') {
+        onFailure = message;
+        message = null;
+      }
 
       // Check if dependencies are loaded
       if (
@@ -26,6 +33,7 @@
 
       if (!elements.success) {
         console.log("❌ Elements not found");
+        if (onFailure) onFailure();
         return false;
       }
 
