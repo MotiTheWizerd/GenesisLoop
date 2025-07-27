@@ -34,6 +34,7 @@
           "js/utils/constants.js",
           "js/utils/responseTracker.js",
           "js/utils/fetchSender.js",
+          "js/utils/dataSender.js",
           "js/utils/dom-utils/responseObserver.js",
           "js/utils/dom-utils/elementFinder.js",
           "js/utils/dom-utils/debugUtils.js",

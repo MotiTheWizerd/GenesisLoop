@@ -21,7 +21,8 @@ window.DependencyLoader = {
     
     // Optional dependencies (we have fallbacks)
     const optionalDependencies = [
-      'ResponseTracker'
+      'ResponseTracker',
+      'DataSender'
     ];
     
     const allDependencies = [...criticalDependencies, ...optionalDependencies];
