@@ -119,7 +119,8 @@
                   console.log("❌ First message send failed");
                   self.waitingForResponse = false;
                   self.stopLoop();
-                }
+                },
+                true // Skip MessageSender's response handling - MessageLoop will handle it
               );
 
               if (success) {
@@ -140,6 +141,25 @@
 
                   // Send JSON response to server
                   self.sendResponseToServer(response);
+
+                  // Check if this is a reflect action response - if so, stop the heartbeat
+                  try {
+                    const jsonData = JSON.parse(response);
+                    if (jsonData && jsonData.action === "reflect") {
+                      console.log("🧠 REFLECT ACTION DETECTED ON FIRST RESPONSE! Stopping heartbeat loop.");
+                      console.log("💭 Reflection content will remain in input field for manual review/sending.");
+                      self.stopLoop();
+                      
+                      // Update toggle button to show stopped state
+                      if (typeof window.ToggleButton !== "undefined") {
+                        window.ToggleButton.resetToggleButton();
+                      }
+                      
+                      return; // Exit early - don't schedule next message
+                    }
+                  } catch (parseError) {
+                    console.log("⚠️ First response is not JSON, continuing normal loop");
+                  }
 
                   // Continue the loop
                   if (self.isRunning) {
@@ -214,6 +234,25 @@
 
         // Send JSON response to server
         self.sendResponseToServer(response);
+
+        // Check if this is a reflect action response - if so, stop the heartbeat
+        try {
+          const jsonData = JSON.parse(response);
+          if (jsonData && jsonData.action === "reflect") {
+            console.log("🧠 REFLECT ACTION DETECTED! Stopping heartbeat loop to prevent overwriting reflection.");
+            console.log("💭 Reflection content will remain in input field for manual review/sending.");
+            self.stopLoop();
+            
+            // Update toggle button to show stopped state
+            if (typeof window.ToggleButton !== "undefined") {
+              window.ToggleButton.resetToggleButton();
+            }
+            
+            return; // Exit early - don't schedule next message
+          }
+        } catch (parseError) {
+          console.log("⚠️ Response is not JSON, continuing normal loop");
+        }
 
         // Send the next message after a short delay (ONLY after response)
         if (self.isRunning) {
@@ -313,7 +352,8 @@
                       }
                     }, 1000);
                   }
-                }
+                },
+                true // Skip MessageSender's response handling - MessageLoop will handle it
               );
 
               // Handle success case
@@ -347,7 +387,7 @@
                     }
                   }, 1000);
                 }
-              });
+              }, true); // Skip MessageSender's response handling
 
               if (success) {
                 self.attemptCount = 0;
@@ -377,7 +417,7 @@
                   }
                 }, 1000);
               }
-            });
+            }, true); // Skip MessageSender's response handling
 
             if (success) {
               self.attemptCount = 0;
@@ -405,7 +445,7 @@
               }
             }, 1000);
           }
-        });
+        }, true); // Skip MessageSender's response handling
 
         if (success) {
           self.attemptCount = 0;

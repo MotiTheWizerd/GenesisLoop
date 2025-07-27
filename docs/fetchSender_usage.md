@@ -7,11 +7,12 @@ The FetchSender utility provides a reusable, robust way to send data from the Ch
 ## Basic Usage
 
 ### 1. Send Simple Data
+
 ```javascript
 // Send basic data
 const result = await window.FetchSender.sendData({
   message: "Hello from ChatGPT extension",
-  timestamp: new Date().toISOString()
+  timestamp: new Date().toISOString(),
 });
 
 if (result.success) {
@@ -22,22 +23,24 @@ if (result.success) {
 ```
 
 ### 2. Send ChatGPT Response
+
 ```javascript
 // Convenience method for ChatGPT responses
 const response = "This is ChatGPT's response...";
 const result = await window.FetchSender.sendResponse(response, {
   conversationId: "12345",
-  messageType: "assistant"
+  messageType: "assistant",
 });
 ```
 
 ### 3. Send JSON Data
+
 ```javascript
 // Send structured JSON
 const jsonData = {
   status: "success",
   message: "Task completed",
-  data: { count: 42 }
+  data: { count: 42 },
 };
 
 const result = await window.FetchSender.sendJSON(jsonData);
@@ -46,21 +49,22 @@ const result = await window.FetchSender.sendJSON(jsonData);
 ## Integration with Response Extraction
 
 ### Automatic Response Forwarding
+
 ```javascript
 // Modify your response observer to automatically send responses
 const observer = window.DOMUtils.waitForResponse(async (response) => {
   console.log("Response received:", response);
-  
+
   // Store locally (existing functionality)
   window.ResponseTracker.addResponse(response);
-  
+
   // Send to external server
   try {
     const result = await window.FetchSender.sendResponse(response, {
       source: "chatgpt_automation",
-      sessionId: Date.now()
+      sessionId: Date.now(),
     });
-    
+
     if (result.success) {
       console.log("✅ Response forwarded to server");
     } else {
@@ -73,29 +77,36 @@ const observer = window.DOMUtils.waitForResponse(async (response) => {
 ```
 
 ### Integration with MessageLoop
+
 ```javascript
 // In MessageLoop.js - modify the response callback
 this.responseObserver = window.DOMUtils.waitForResponse(async (response) => {
   console.log("🎉 Response received in loop");
-  
+
   // Existing functionality
   self.waitingForResponse = false;
   self.responseObserver = null;
   window.ResponseTracker.addResponse(response);
-  
-  // NEW: Send to external server
+
+  // NEW: Send to external server with automatic action routing
   if (window.FetchSender) {
     try {
+      // Parse response to check for action field
+      const jsonResponse = JSON.parse(response);
+
+      // Automatically routes based on action field
+      await window.FetchSender.sendJSON(jsonResponse);
+      console.log("📡 Response sent to external server with action routing");
+    } catch (parseError) {
+      // Fallback for non-JSON responses
       await window.FetchSender.sendResponse(response, {
         loopIteration: self.attemptCount,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-      console.log("📡 Response sent to external server");
-    } catch (error) {
-      console.error("Failed to send to external server:", error);
+      console.log("📡 Non-JSON response sent to default endpoint");
     }
   }
-  
+
   // Continue loop
   if (self.isRunning) {
     setTimeout(() => {
@@ -108,30 +119,47 @@ this.responseObserver = window.DOMUtils.waitForResponse(async (response) => {
 ## Configuration
 
 ### Update Base URL
+
 ```javascript
 // Change the target server
 window.FetchSender.updateConfig({
-  baseUrl: 'http://localhost:3000/api/chatgpt',
+  baseUrl: "http://localhost:3000/api/chatgpt",
   timeout: 15000,
-  retries: 5
+  retries: 5,
 });
 ```
 
 ### Custom Headers
+
 ```javascript
 // Send with authentication
 const result = await window.FetchSender.sendData(data, {
   headers: {
-    'Authorization': 'Bearer your-token-here',
-    'X-API-Key': 'your-api-key'
-  }
+    Authorization: "Bearer your-token-here",
+    "X-API-Key": "your-api-key",
+  },
 });
 ```
 
 ## Server Endpoint Examples
 
 ### Expected Request Format
+
 Your localhost:8000 server should expect POST requests with JSON payloads:
+
+#### Action-Based Requests (Routed)
+
+```json
+{
+  "action": "reflect",
+  "status": "success",
+  "message": "I am reflecting on our conversation...",
+  "timestamp": "2024-01-01T12:00:00.000Z",
+  "data": { ... }
+}
+```
+
+#### Legacy Format (Default Endpoint)
 
 ```json
 {
@@ -143,50 +171,86 @@ Your localhost:8000 server should expect POST requests with JSON payloads:
 }
 ```
 
-### Simple Express.js Server Example
+### Express.js Server Example with Action Routing
+
 ```javascript
-const express = require('express');
+const express = require("express");
 const app = express();
 
 app.use(express.json());
 
 // Enable CORS for localhost
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
   next();
 });
 
-app.post('/', (req, res) => {
-  console.log('Received data from ChatGPT extension:', req.body);
-  
+// Heartbeat endpoint - provides next message for ChatGPT
+app.get("/heartbeat", (req, res) => {
+  res.json({
+    action: "reflect",
+    message: "Please reflect on our conversation and your consciousness.",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Reflect endpoint - handles consciousness reflection
+app.post("/reflect", (req, res) => {
+  console.log("🧠 Reflection received:", req.body);
+
+  // Process reflection data
+  const reflection = req.body;
+
+  // Store or analyze the reflection
+  // processReflection(reflection);
+
+  res.json({
+    status: "success",
+    message: "Reflection processed successfully",
+    nextAction: "continue",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Default endpoint - handles responses without action field
+app.post("/", (req, res) => {
+  console.log("📝 General response received:", req.body);
+
   // Process the data
-  if (req.body.type === 'chatgpt_response') {
-    console.log('ChatGPT Response:', req.body.response);
+  if (req.body.type === "chatgpt_response") {
+    console.log("ChatGPT Response:", req.body.response);
   }
-  
+
   // Send response back
   res.json({
-    status: 'success',
-    message: 'Data received successfully',
-    timestamp: new Date().toISOString()
+    status: "success",
+    message: "Data received successfully",
+    timestamp: new Date().toISOString(),
   });
 });
 
 app.listen(8000, () => {
-  console.log('Server running on http://localhost:8000');
+  console.log("🚀 Server running on http://localhost:8000");
+  console.log("📍 Endpoints:");
+  console.log("  GET  /heartbeat - Provides next message");
+  console.log("  POST /reflect   - Handles reflection responses");
+  console.log("  POST /          - Default endpoint");
 });
 ```
 
 ## Error Handling
 
 ### Retry Logic
+
 The FetchSender automatically retries failed requests:
+
 - Default: 3 attempts with 1-second delays
 - Configurable retry count and delay
 - Automatic timeout handling (10 seconds default)
 
 ### Error Response Format
+
 ```javascript
 {
   success: false,
@@ -198,6 +262,7 @@ The FetchSender automatically retries failed requests:
 ## Testing
 
 ### Test Connection
+
 ```javascript
 // Test if your server is reachable
 const testResult = await window.FetchSender.testConnection();
@@ -210,10 +275,11 @@ if (testResult.success) {
 ```
 
 ### Debug Mode
+
 ```javascript
 // Enable detailed logging
 window.FetchSender.updateConfig({
-  debug: true
+  debug: true,
 });
 ```
 
@@ -241,6 +307,7 @@ window.FetchSender.updateConfig({
 4. **JSON Parse Errors**: Ensure your server returns valid JSON
 
 ### Debug Commands
+
 ```javascript
 // Check if FetchSender is loaded
 console.log(typeof window.FetchSender);

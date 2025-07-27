@@ -51,6 +51,16 @@
       ) ||
       document.querySelector("button[type='submit']"); // Common submit button
 
+    // Exclude voice/speech buttons specifically
+    if (sendButton && (
+      sendButton.getAttribute('data-testid') === 'composer-speech-button' ||
+      sendButton.getAttribute('aria-label')?.includes('voice') ||
+      sendButton.getAttribute('aria-label')?.includes('speech')
+    )) {
+      console.log("⚠️ Found voice button, not send button - continuing search...");
+      sendButton = null;
+    }
+
     // If we still don't have a send button, try more approaches
     if (!sendButton) {
       console.log(
@@ -169,9 +179,9 @@
     if (sendButton) console.log("Found send button:", sendButton.className);
 
     return {
-      success: !!(textarea && sendButton),
+      success: !!textarea, // Only require textarea now
       textarea,
-      sendButton,
+      sendButton, // Optional - kept for backward compatibility
     };
   }
 

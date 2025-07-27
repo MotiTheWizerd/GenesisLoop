@@ -12,6 +12,14 @@
       timeout: 10000, // 10 seconds
       retries: 3,
       retryDelay: 1000, // 1 second
+      
+      // Action-based routing configuration
+      actionRoutes: {
+        "reflect": "reflect",
+        // Future actions can be added here
+        // "analyze": "analyze",
+        // "generate": "generate"
+      }
     },
 
     /**
@@ -22,8 +30,11 @@
      */
     async sendData(data, options = {}) {
       const config = { ...this.config, ...options };
+      
+      // Use baseUrl from options if provided (for action routing)
+      const targetUrl = options.baseUrl || config.baseUrl;
 
-      console.log("📡 FetchSender: Preparing to send data to", config.baseUrl);
+      console.log("📡 FetchSender: Preparing to send data to", targetUrl);
       console.log("📦 Data to send:", data);
 
       // Prepare the request payload
@@ -48,7 +59,7 @@
         try {
           console.log(`🚀 FetchSender: Attempt ${attempt}/${config.retries}`);
 
-          const response = await fetch(config.baseUrl, payload);
+          const response = await fetch(targetUrl, payload);
           clearTimeout(timeoutId);
 
           console.log("📨 FetchSender: Response status:", response.status);
@@ -147,7 +158,49 @@
      */
     async sendJSON(jsonData, options = {}) {
       console.log("📋 FetchSender: Sending JSON data");
+      
+      // Check if jsonData has an action field for routing
+      if (jsonData && typeof jsonData === 'object' && jsonData.action) {
+        console.log(`🎯 FetchSender: Detected action '${jsonData.action}' - routing to specific endpoint`);
+        return this.sendJSONWithAction(jsonData, options);
+      }
+      
+      // Fallback to default endpoint
+      console.log("📋 FetchSender: No action field detected - using default endpoint");
       return this.sendData(jsonData, options);
+    },
+
+    /**
+     * Send JSON data to action-specific endpoint
+     * @param {Object} jsonData - JSON object with action field
+     * @param {Object} options - Optional configuration overrides
+     * @returns {Promise<Object>} Response data or error
+     */
+    async sendJSONWithAction(jsonData, options = {}) {
+      const action = jsonData.action;
+      const config = { ...this.config, ...options };
+      
+      // Get the route for this action
+      const route = config.actionRoutes[action];
+      if (!route) {
+        console.warn(`⚠️ FetchSender: No route configured for action '${action}' - using default endpoint`);
+        return this.sendData(jsonData, options);
+      }
+      
+      // Build the action-specific URL
+      const actionUrl = config.baseUrl.endsWith('/') 
+        ? config.baseUrl + route 
+        : config.baseUrl + '/' + route;
+      
+      console.log(`🚀 FetchSender: Routing action '${action}' to ${actionUrl}`);
+      
+      // Send to the action-specific endpoint
+      const actionOptions = {
+        ...options,
+        baseUrl: actionUrl
+      };
+      
+      return this.sendData(jsonData, actionOptions);
     },
 
     /**
@@ -177,6 +230,39 @@
     },
 
     /**
+     * Add or update action route
+     * @param {string} action - Action name
+     * @param {string} route - Route path
+     */
+    addActionRoute(action, route) {
+      this.config.actionRoutes[action] = route;
+      console.log(`🎯 FetchSender: Added route for action '${action}' -> '${route}'`);
+      console.log("🗺️ Current action routes:", this.config.actionRoutes);
+    },
+
+    /**
+     * Remove action route
+     * @param {string} action - Action name to remove
+     */
+    removeActionRoute(action) {
+      if (this.config.actionRoutes[action]) {
+        delete this.config.actionRoutes[action];
+        console.log(`🗑️ FetchSender: Removed route for action '${action}'`);
+      } else {
+        console.warn(`⚠️ FetchSender: No route found for action '${action}'`);
+      }
+      console.log("🗺️ Current action routes:", this.config.actionRoutes);
+    },
+
+    /**
+     * Get all configured action routes
+     * @returns {Object} Current action routes
+     */
+    getActionRoutes() {
+      return { ...this.config.actionRoutes };
+    },
+
+    /**
      * Get heartbeat data from server
      * @param {Object} options - Optional configuration overrides
      * @returns {Promise<Object>} Heartbeat response
@@ -185,7 +271,7 @@
       console.log("💓 FetchSender: Getting heartbeat...");
       
       const config = { ...this.config, ...options };
-      const heartbeatUrl = config.baseUrl + "heartbeat";
+      const heartbeatUrl = (config.baseUrl.endsWith('/') ? config.baseUrl : config.baseUrl + '/') + "heartbeat";
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), config.timeout);

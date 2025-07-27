@@ -9,9 +9,10 @@
      * Send a test message to ChatGPT
      * @param {string|Function} message - Message to send or callback function for failure
      * @param {Function} onFailure - Callback function for failure (when message is string)
-     * @returns {boolean} Whether the message was sent successfully
+     * @param {boolean} skipResponseHandling - Skip automatic response handling (for MessageLoop)
+     * @returns {Promise<boolean>} Promise that resolves when message is actually sent
      */
-    sendTestMessage: function (message, onFailure) {
+    sendTestMessage: async function (message, onFailure, skipResponseHandling = false) {
       console.log("🚀 MessageSender.sendTestMessage called");
 
       // Handle legacy callback parameter (when message is actually a callback)
@@ -31,8 +32,9 @@
 
       const elements = window.DOMUtils.findRequiredElements();
 
-      if (!elements.success) {
-        console.log("❌ Elements not found");
+      // We only need the textarea now (not the send button)
+      if (!elements.textarea) {
+        console.log("❌ Textarea not found");
         if (onFailure) onFailure();
         return false;
       }
@@ -181,55 +183,8 @@
                 new Event("paste", { bubbles: true })
               );
 
-              // Wait a moment to ensure the UI updates before sending
-              setTimeout(() => {
-                console.log("🔤 NEW APPROACH: Sending message via Enter key press");
-                console.log("🎯 Textarea element:", elements.textarea);
-                console.log("🎯 Textarea focused?", document.activeElement === elements.textarea);
-                console.log("🎯 Textarea content:", elements.textarea.innerText || elements.textarea.value);
-                
-                // Focus the textarea and press Enter
-                try {
-                  console.log("🔍 Focusing textarea...");
-                  elements.textarea.focus();
-                  console.log("🔍 Textarea focused, active element:", document.activeElement);
-                  
-                  // Create Enter key event
-                  console.log("🔍 Creating Enter key event...");
-                  const enterEvent = new KeyboardEvent("keydown", {
-                    key: "Enter",
-                    code: "Enter",
-                    keyCode: 13,
-                    which: 13,
-                    bubbles: true,
-                    cancelable: true,
-                    ctrlKey: false,
-                    shiftKey: false,
-                  });
-                  
-                  console.log("🔍 Dispatching Enter key event...");
-                  const eventResult = elements.textarea.dispatchEvent(enterEvent);
-                  console.log("✅ Enter key event dispatched, result:", eventResult);
-                  
-                  // Also try keyup event
-                  const enterUpEvent = new KeyboardEvent("keyup", {
-                    key: "Enter",
-                    code: "Enter",
-                    keyCode: 13,
-                    which: 13,
-                    bubbles: true,
-                    cancelable: true,
-                  });
-                  elements.textarea.dispatchEvent(enterUpEvent);
-                  console.log("✅ Enter keyup event dispatched");
-                  
-                } catch (enterError) {
-                  console.error("❌ Enter key press failed:", enterError);
-                }
-              }, 500);
-
-              // Return early since we're handling the click in the timeout
-              return true;
+              // Don't return early - let it fall through to send button click
+              console.log("✅ ProseMirror content set, will proceed to send button click");
             } else {
               // Generic contenteditable approach
               elements.textarea.innerHTML = textToSend;
@@ -240,70 +195,95 @@
           }
         }
 
-        // Click the send button with delay for non-ProseMirror cases
-        console.log("🖱️ Clicking send button for non-ProseMirror case");
+        // Send message using Enter key simulation (much simpler and more reliable)
+        console.log("⌨️ Sending message via Enter key simulation");
 
         setTimeout(() => {
-          // Try to enable the button if it's disabled
-          if (elements.sendButton.disabled) {
-            console.log("⚠️ Send button is disabled, trying to enable it");
-            elements.sendButton.disabled = false;
-          }
-
-          // Try multiple click approaches with realistic mouse events
+          console.log("🔍 Textarea info:");
+          console.log("  - Textarea element:", elements.textarea);
+          console.log("  - Textarea focused:", document.activeElement === elements.textarea);
+          console.log("  - Textarea content:", elements.textarea.innerText || elements.textarea.value);
+          
           try {
-            // Simulate realistic mouse interaction sequence
-            elements.sendButton.dispatchEvent(
-              new MouseEvent("mousedown", { bubbles: true, cancelable: true })
-            );
-            elements.sendButton.dispatchEvent(
-              new MouseEvent("mouseup", { bubbles: true, cancelable: true })
-            );
-
-            // Method 1: Direct click
-            elements.sendButton.click();
-            console.log("✅ Send button clicked via .click()");
-          } catch (clickError) {
-            console.error("❌ Direct click failed:", clickError);
-
-            try {
-              // Method 2: MouseEvent
-              elements.sendButton.dispatchEvent(
-                new MouseEvent("click", {
-                  bubbles: true,
-                  cancelable: true,
-                  view: window,
-                })
-              );
-              console.log("✅ Send button clicked via MouseEvent");
-            } catch (mouseError) {
-              console.error("❌ MouseEvent click failed:", mouseError);
-
-              // Method 3: Try pressing Enter key
-              try {
-                console.log("🔤 Trying Enter key press");
-                elements.textarea.focus();
-                const enterEvent = new KeyboardEvent("keydown", {
-                  key: "Enter",
-                  code: "Enter",
-                  keyCode: 13,
-                  which: 13,
-                  bubbles: true,
-                  cancelable: true,
-                });
-                elements.textarea.dispatchEvent(enterEvent);
-                console.log("✅ Enter key pressed");
-              } catch (enterError) {
-                console.error("❌ Enter key press failed:", enterError);
-              }
-            }
+            // Focus the textarea first
+            console.log("🎯 Focusing textarea...");
+            elements.textarea.focus();
+            
+            // Wait a moment for focus to take effect
+            setTimeout(() => {
+              console.log("⌨️ Simulating Enter key press...");
+              
+              // Create comprehensive Enter key events
+              const enterKeyDown = new KeyboardEvent("keydown", {
+                key: "Enter",
+                code: "Enter",
+                keyCode: 13,
+                which: 13,
+                bubbles: true,
+                cancelable: true,
+                ctrlKey: false,
+                shiftKey: false,
+                altKey: false,
+                metaKey: false
+              });
+              
+              const enterKeyPress = new KeyboardEvent("keypress", {
+                key: "Enter",
+                code: "Enter",
+                keyCode: 13,
+                which: 13,
+                bubbles: true,
+                cancelable: true,
+                ctrlKey: false,
+                shiftKey: false,
+                altKey: false,
+                metaKey: false
+              });
+              
+              const enterKeyUp = new KeyboardEvent("keyup", {
+                key: "Enter",
+                code: "Enter",
+                keyCode: 13,
+                which: 13,
+                bubbles: true,
+                cancelable: true,
+                ctrlKey: false,
+                shiftKey: false,
+                altKey: false,
+                metaKey: false
+              });
+              
+              // Dispatch all three events in sequence
+              console.log("📤 Dispatching keydown event...");
+              const keydownResult = elements.textarea.dispatchEvent(enterKeyDown);
+              console.log("📤 Keydown result:", keydownResult);
+              
+              console.log("📤 Dispatching keypress event...");
+              const keypressResult = elements.textarea.dispatchEvent(enterKeyPress);
+              console.log("📤 Keypress result:", keypressResult);
+              
+              console.log("📤 Dispatching keyup event...");
+              const keyupResult = elements.textarea.dispatchEvent(enterKeyUp);
+              console.log("📤 Keyup result:", keyupResult);
+              
+              console.log("✅ Enter key simulation completed");
+              
+            }, 100); // Small delay after focus
+            
+          } catch (error) {
+            console.error("❌ Enter key simulation failed:", error);
           }
-        }, 1000); // 1 second delay to ensure text is recognized
+        }, 1500); // 1.5 second delay to ensure text is recognized
 
         console.log("✅ Sent: <test>");
 
-        // Fire the signal after sending
-        this.onSignalSent();
+        // Fire the signal after sending (only if not skipping response handling)
+        if (!skipResponseHandling) {
+          console.log("📡 Starting MessageSender's own response handling");
+          this.onSignalSent();
+        } else {
+          console.log("⏭️ Skipping MessageSender response handling - MessageLoop will handle it");
+        }
 
         return true;
       } catch (error) {
