@@ -3,10 +3,10 @@
  * Centralized data transmission handler for all ChatGPT responses
  * Works alongside existing FetchSender without breaking current functionality
  */
-(function() {
-  'use strict';
-  
-  console.log('📡 DataSender module starting to load...');
+(function () {
+  "use strict";
+
+  console.log("📡 DataSender module starting to load...");
 
   const DataSender = {
     // Configuration
@@ -14,7 +14,7 @@
       enableLogging: true,
       validateResponses: true,
       retryFailedSends: true,
-      maxRetries: 3
+      maxRetries: 3,
     },
 
     /**
@@ -26,35 +26,37 @@
     async sendExtractedResponse(response, metadata = {}) {
       try {
         if (this.config.enableLogging) {
-          console.log('📡 DataSender: Processing extracted response');
-          console.log('📄 Response preview:', response?.substring(0, 100) + '...');
-          console.log('📊 Response length:', response?.length || 0);
-          console.log('🏷️ Metadata:', metadata);
+          console.log("📡 DataSender: Processing extracted response");
+          console.log(
+            "📄 Response preview:",
+            response?.substring(0, 100) + "..."
+          );
+          console.log("📊 Response length:", response?.length || 0);
+          console.log("🏷️ Metadata:", metadata);
         }
 
         // Validate response
-        if (!response || typeof response !== 'string') {
-          throw new Error('Invalid response: must be a non-empty string');
+        if (!response || typeof response !== "string") {
+          throw new Error("Invalid response: must be a non-empty string");
         }
 
         // Process the response
         const processedData = await this.processResponse(response, metadata);
-        
+
         // Route and send the data
         const result = await this.routeAndSend(processedData);
-        
-        if (this.config.enableLogging) {
-          console.log('✅ DataSender: Response sent successfully');
-        }
-        
-        return result;
 
+        if (this.config.enableLogging) {
+          console.log("✅ DataSender: Response sent successfully");
+        }
+
+        return result;
       } catch (error) {
-        console.error('❌ DataSender: Error sending response:', error);
+        console.error("❌ DataSender: Error sending response:", error);
         return {
           success: false,
           error: error.message,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       }
     },
@@ -70,28 +72,27 @@
         originalResponse: response,
         processedAt: new Date().toISOString(),
         metadata: metadata,
-        type: 'unknown',
-        data: null
+        type: "unknown",
+        data: null,
       };
 
       // Try to parse as JSON first
       try {
         const jsonData = JSON.parse(response);
-        processedData.type = 'json';
+        processedData.type = "json";
         processedData.data = jsonData;
-        
+
         if (this.config.enableLogging) {
-          console.log('📋 DataSender: Response parsed as JSON');
-          console.log('🎯 Action detected:', jsonData.action || 'none');
+          console.log("📋 DataSender: Response parsed as JSON");
+          console.log("🎯 Action detected:", jsonData.action || "none");
         }
-        
       } catch (parseError) {
         // Not JSON, treat as text
-        processedData.type = 'text';
+        processedData.type = "text";
         processedData.data = response;
-        
+
         if (this.config.enableLogging) {
-          console.log('📝 DataSender: Response treated as text');
+          console.log("📝 DataSender: Response treated as text");
         }
       }
 
@@ -105,19 +106,19 @@
      */
     async routeAndSend(processedData) {
       // Check if FetchSender is available
-      if (typeof window.FetchSender === 'undefined') {
-        throw new Error('FetchSender not available');
+      if (typeof window.FetchSender === "undefined") {
+        throw new Error("FetchSender not available");
       }
 
       let result;
 
-      if (processedData.type === 'json') {
+      if (processedData.type === "json") {
         // Use FetchSender's JSON method with action routing
         result = await window.FetchSender.sendJSON(processedData.data);
       } else {
         // Use FetchSender's response method for text
         result = await window.FetchSender.sendResponse(
-          processedData.originalResponse, 
+          processedData.originalResponse,
           processedData.metadata
         );
       }
@@ -127,7 +128,7 @@
         ...result,
         dataSenderProcessed: true,
         responseType: processedData.type,
-        processedAt: processedData.processedAt
+        processedAt: processedData.processedAt,
       };
     },
 
@@ -138,7 +139,7 @@
     updateConfig(newConfig) {
       this.config = { ...this.config, ...newConfig };
       if (this.config.enableLogging) {
-        console.log('⚙️ DataSender: Configuration updated', this.config);
+        console.log("⚙️ DataSender: Configuration updated", this.config);
       }
     },
 
@@ -155,35 +156,36 @@
      * @returns {Promise<Object>} Test result
      */
     async test() {
-      console.log('🧪 DataSender: Running test...');
-      
+      console.log("🧪 DataSender: Running test...");
+
       const testResponse = JSON.stringify({
-        action: 'test',
-        message: 'DataSender test message',
-        timestamp: new Date().toISOString()
+        action: "test",
+        message: "DataSender test message",
+        timestamp: new Date().toISOString(),
       });
 
       try {
         const result = await this.sendExtractedResponse(testResponse, {
-          source: 'dataSender_test',
-          testRun: true
+          source: "dataSender_test",
+          testRun: true,
         });
 
-        console.log('🧪 DataSender test result:', result);
+        console.log("🧪 DataSender test result:", result);
         return result;
       } catch (error) {
-        console.error('🧪 DataSender test failed:', error);
+        console.error("🧪 DataSender test failed:", error);
         return {
           success: false,
-          error: error.message
+          error: error.message,
         };
       }
-    }
+    },
   };
 
   // Expose the module
   window.DataSender = DataSender;
-  
-  console.log('✅ DataSender loaded successfully');
-  
+
+  console.log("✅ DataSender loaded successfully");
 })();
+
+

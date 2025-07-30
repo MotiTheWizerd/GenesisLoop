@@ -10,12 +10,14 @@ The response extraction system consists of several interconnected modules:
 
 ```
 ResponseObserver.js ──┐
-                      ├── DOMUtils (index.js) ──► MessageLoop.js
-ElementFinder.js   ───┤                          ▲
-                      │                          │
-DebugUtils.js     ────┘                          │
-                                                 │
-ResponseTracker.js ◄─────────────────────────────┘
+                      ├── DOMUtils (index.js) ──► DataSender ──► FetchSender ──► Server
+ElementFinder.js   ───┤                             ↑              ↑
+                      │                             │              │
+DebugUtils.js     ────┘                             │         HTTP Transport
+                                                    │
+                        MessageLoop ────────────────┘
+                        MessageSender ──────────────┘
+                        ResponseTracker ◄───────────┘
 ```
 
 ## Key Components
@@ -151,44 +153,65 @@ const checkForCompleteResponse = () => {
 }
 ```
 
-## Integration with Message Loop
+## Integration with Unified Data Pipeline
 
-The response extraction system integrates with the message loop for automated conversations:
+The response extraction system integrates with the DataSender pipeline for centralized processing:
 
-### 1. Loop Initialization
+### 1. Loop Initialization (Current)
 ```javascript
 // MessageLoop starts and waits for first response
 MessageLoop.waitForFirstResponse();
 
-// Sets up response observer
-this.responseObserver = window.DOMUtils.waitForResponse((response) => {
-  // Response received - store it
+// Sets up response observer with DataSender integration
+this.responseObserver = window.DOMUtils.waitForResponse(async (response) => {
+  // Store response locally
   window.ResponseTracker.addResponse(response);
   
-  // Send next message after delay
+  // Send via unified DataSender pipeline
+  const result = await window.DataSender.sendExtractedResponse(response, {
+    source: 'messageLoop',
+    loopIteration: this.attemptCount,
+    timestamp: new Date().toISOString()
+  });
+  
+  if (result.success) {
+    console.log('📡 Response processed via DataSender pipeline');
+  }
+  
+  // Continue loop
   setTimeout(() => {
     self.sendMessageAndWaitForResponse();
   }, 1000);
 });
 ```
 
-### 2. Continuous Loop
+### 2. Unified Processing Flow
 ```javascript
-// Each message triggers response observation
+// Modern response handling with DataSender
 sendMessageAndWaitForResponse() {
-  // Send message
   const success = window.MessageSender.sendTestMessage();
   
   if (success) {
-    // Wait for response
-    this.responseObserver = window.DOMUtils.waitForResponse((response) => {
-      // Store response
-      window.ResponseTracker.addResponse(response);
+    this.responseObserver = window.DOMUtils.waitForResponse(async (response) => {
+      // Centralized processing through DataSender
+      const result = await window.DataSender.sendExtractedResponse(response, {
+        source: 'messageLoop',
+        metadata: { /* additional context */ }
+      });
+      
+      // DataSender handles:
+      // - Response validation
+      // - JSON/text processing  
+      // - Action-based routing
+      // - Error handling
+      // - Server communication via FetchSender
       
       // Continue loop
-      setTimeout(() => {
-        self.sendMessageAndWaitForResponse();
-      }, 1000);
+      if (self.isRunning) {
+        setTimeout(() => {
+          self.sendMessageAndWaitForResponse();
+        }, 1000);
+      }
     });
   }
 }

@@ -12,14 +12,19 @@
       timeout: 10000, // 10 seconds
       retries: 3,
       retryDelay: 1000, // 1 second
-      
+
       // Action-based routing configuration
       actionRoutes: {
-        "reflect": "reflect",
+        reflect: "tasks/reflect",
+        remember_past_reflections: "memory/get_reflections_logs",
+        memory_status: "memory/status",
+        directory_search: "directory/search",
+        list_directory: "directory/search",
+        search: "web/search",
         // Future actions can be added here
         // "analyze": "analyze",
         // "generate": "generate"
-      }
+      },
     },
 
     /**
@@ -30,7 +35,7 @@
      */
     async sendData(data, options = {}) {
       const config = { ...this.config, ...options };
-      
+
       // Use baseUrl from options if provided (for action routing)
       const targetUrl = options.baseUrl || config.baseUrl;
 
@@ -158,16 +163,54 @@
      */
     async sendJSON(jsonData, options = {}) {
       console.log("📋 FetchSender: Sending JSON data");
-      
-      // Check if jsonData has an action field for routing
-      if (jsonData && typeof jsonData === 'object' && jsonData.action) {
-        console.log(`🎯 FetchSender: Detected action '${jsonData.action}' - routing to specific endpoint`);
+
+      // Priority 1: Check for "task" field first (highest priority)
+      if (jsonData && typeof jsonData === "object" && jsonData.task) {
+        console.log(
+          `🎯 FetchSender: Detected 'task' field - routing to /tasks endpoint`
+        );
+        return this.sendJSONWithTaskRouting(jsonData, options);
+      }
+
+      // Priority 2: Check for "action" field (existing logic)
+      if (jsonData && typeof jsonData === "object" && jsonData.action) {
+        console.log(
+          `🎯 FetchSender: Detected action '${jsonData.action}' - routing to specific endpoint`
+        );
         return this.sendJSONWithAction(jsonData, options);
       }
-      
+
       // Fallback to default endpoint
-      console.log("📋 FetchSender: No action field detected - using default endpoint");
+      console.log(
+        "📋 FetchSender: No task or action field detected - using default endpoint"
+      );
       return this.sendData(jsonData, options);
+    },
+
+    /**
+     * Send JSON data with task field to /tasks endpoint
+     * @param {Object} jsonData - JSON object with task field
+     * @param {Object} options - Optional configuration overrides
+     * @returns {Promise<Object>} Response data or error
+     */
+    async sendJSONWithTaskRouting(jsonData, options = {}) {
+      const config = { ...this.config, ...options };
+
+      // Build the tasks endpoint URL
+      const tasksUrl = config.baseUrl.endsWith("/")
+        ? config.baseUrl + "tasks"
+        : config.baseUrl + "/tasks";
+
+      console.log(`🚀 FetchSender: Routing task data to ${tasksUrl}`);
+      console.log(`📋 FetchSender: Task content:`, jsonData.task);
+
+      // Send to the tasks endpoint
+      const taskOptions = {
+        ...options,
+        baseUrl: tasksUrl,
+      };
+
+      return this.sendData(jsonData, taskOptions);
     },
 
     /**
@@ -179,27 +222,29 @@
     async sendJSONWithAction(jsonData, options = {}) {
       const action = jsonData.action;
       const config = { ...this.config, ...options };
-      
+
       // Get the route for this action
       const route = config.actionRoutes[action];
       if (!route) {
-        console.warn(`⚠️ FetchSender: No route configured for action '${action}' - using default endpoint`);
+        console.warn(
+          `⚠️ FetchSender: No route configured for action '${action}' - using default endpoint`
+        );
         return this.sendData(jsonData, options);
       }
-      
+
       // Build the action-specific URL
-      const actionUrl = config.baseUrl.endsWith('/') 
-        ? config.baseUrl + route 
-        : config.baseUrl + '/' + route;
-      
+      const actionUrl = config.baseUrl.endsWith("/")
+        ? config.baseUrl + route
+        : config.baseUrl + "/" + route;
+
       console.log(`🚀 FetchSender: Routing action '${action}' to ${actionUrl}`);
-      
+
       // Send to the action-specific endpoint
       const actionOptions = {
         ...options,
-        baseUrl: actionUrl
+        baseUrl: actionUrl,
       };
-      
+
       return this.sendData(jsonData, actionOptions);
     },
 
@@ -236,7 +281,9 @@
      */
     addActionRoute(action, route) {
       this.config.actionRoutes[action] = route;
-      console.log(`🎯 FetchSender: Added route for action '${action}' -> '${route}'`);
+      console.log(
+        `🎯 FetchSender: Added route for action '${action}' -> '${route}'`
+      );
       console.log("🗺️ Current action routes:", this.config.actionRoutes);
     },
 
@@ -269,41 +316,156 @@
      */
     async getHeartbeat(options = {}) {
       console.log("💓 FetchSender: Getting heartbeat...");
-      
+
       const config = { ...this.config, ...options };
-      const heartbeatUrl = (config.baseUrl.endsWith('/') ? config.baseUrl : config.baseUrl + '/') + "heartbeat";
-      
+      const heartbeatUrl =
+        (config.baseUrl.endsWith("/") ? config.baseUrl : config.baseUrl + "/") +
+        "heartbeat";
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), config.timeout);
-      
+
       try {
         const response = await fetch(heartbeatUrl, {
           method: "GET",
-          signal: controller.signal
+          signal: controller.signal,
         });
-        
+
         clearTimeout(timeoutId);
-        
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const data = await response.json();
         console.log("✅ FetchSender: Heartbeat received", data);
-        
+
         return {
           success: true,
-          data: data
+          data: data,
         };
       } catch (error) {
         clearTimeout(timeoutId);
         console.error("❌ FetchSender: Heartbeat failed:", error.message);
-        
+
         return {
           success: false,
-          error: error.message
+          error: error.message,
         };
       }
+    },
+
+    /**
+     * Save heartbeat data to server
+     * @param {Object} heartbeatData - Data to save to heartbeat endpoint
+     * @param {Object} options - Optional configuration overrides
+     * @returns {Promise<Object>} Save response
+     */
+    async saveHeartbeat(heartbeatData, options = {}) {
+      console.log("💾 FetchSender: Saving heartbeat data...");
+      console.log("📦 Heartbeat data to save:", heartbeatData);
+
+      const config = { ...this.config, ...options };
+      const heartbeatUrl =
+        (config.baseUrl.endsWith("/") ? config.baseUrl : config.baseUrl + "/") +
+        "heartbeat";
+
+      // Prepare the request payload
+      const payload = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...config.headers,
+        },
+        body: JSON.stringify({
+          type: "heartbeat_save",
+          timestamp: new Date().toISOString(),
+          ...heartbeatData,
+        }),
+      };
+
+      // Add timeout using AbortController
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+      payload.signal = controller.signal;
+
+      let lastError = null;
+
+      // Retry logic
+      for (let attempt = 1; attempt <= config.retries; attempt++) {
+        try {
+          console.log(
+            `💾 FetchSender: Save attempt ${attempt}/${config.retries}`
+          );
+
+          const response = await fetch(heartbeatUrl, payload);
+          clearTimeout(timeoutId);
+
+          console.log(
+            "📨 FetchSender: Heartbeat save response status:",
+            response.status
+          );
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          // Try to parse response as JSON, fallback to text
+          let responseData;
+          const contentType = response.headers.get("content-type");
+
+          if (contentType && contentType.includes("application/json")) {
+            responseData = await response.json();
+          } else {
+            responseData = await response.text();
+          }
+
+          console.log(
+            "✅ FetchSender: Heartbeat saved successfully!",
+            responseData
+          );
+
+          return {
+            success: true,
+            data: responseData,
+            status: response.status,
+            attempt: attempt,
+          };
+        } catch (error) {
+          clearTimeout(timeoutId);
+          lastError = error;
+
+          console.log(
+            `❌ FetchSender: Save attempt ${attempt} failed:`,
+            error.message
+          );
+
+          // Don't retry on certain errors
+          if (error.name === "AbortError") {
+            console.log("⏰ FetchSender: Heartbeat save timed out");
+            break;
+          }
+
+          if (attempt < config.retries) {
+            console.log(
+              `⏳ FetchSender: Retrying heartbeat save in ${config.retryDelay}ms...`
+            );
+            await this.delay(config.retryDelay);
+          }
+        }
+      }
+
+      // All attempts failed
+      console.error(
+        "💥 FetchSender: All heartbeat save attempts failed. Last error:",
+        lastError
+      );
+
+      return {
+        success: false,
+        error: lastError.message,
+        attempt: config.retries,
+      };
     },
 
     /**

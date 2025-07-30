@@ -2,7 +2,18 @@
 
 ## Overview
 
-The FetchSender utility provides a reusable, robust way to send data from the ChatGPT extension to external endpoints. It's designed to work seamlessly with your existing response extraction system.
+The FetchSender utility serves as the HTTP transport layer in the Genesis Loop extension's unified data pipeline. It works in conjunction with DataSender to provide robust, action-based routing to external endpoints.
+
+## Architecture Position
+
+```
+DataSender → FetchSender → Server
+     ↑           ↑
+Processing   Transport
+Validation   Layer
+```
+
+FetchSender is typically accessed through DataSender rather than directly, ensuring consistent data processing and validation.
 
 ## Basic Usage
 
@@ -46,65 +57,52 @@ const jsonData = {
 const result = await window.FetchSender.sendJSON(jsonData);
 ```
 
-## Integration with Response Extraction
+## Integration with DataSender (Recommended)
 
-### Automatic Response Forwarding
+### Unified Data Pipeline
+
+The recommended approach is to use DataSender, which automatically handles FetchSender integration:
 
 ```javascript
-// Modify your response observer to automatically send responses
+// Modern approach - use DataSender
 const observer = window.DOMUtils.waitForResponse(async (response) => {
   console.log("Response received:", response);
 
-  // Store locally (existing functionality)
-  window.ResponseTracker.addResponse(response);
+  // DataSender handles processing, validation, and FetchSender routing
+  const result = await window.DataSender.sendExtractedResponse(response, {
+    source: "chatgpt_automation",
+    sessionId: Date.now(),
+  });
 
-  // Send to external server
-  try {
-    const result = await window.FetchSender.sendResponse(response, {
-      source: "chatgpt_automation",
-      sessionId: Date.now(),
-    });
-
-    if (result.success) {
-      console.log("✅ Response forwarded to server");
-    } else {
-      console.log("❌ Failed to forward response:", result.error);
-    }
-  } catch (error) {
-    console.error("Error forwarding response:", error);
+  if (result.success) {
+    console.log("✅ Response processed and sent via unified pipeline");
+    console.log("📊 Response type:", result.responseType);
+    console.log("🎯 Action detected:", result.action || 'none');
+  } else {
+    console.log("❌ Failed to process response:", result.error);
   }
 });
 ```
 
-### Integration with MessageLoop
+### MessageLoop Integration (Current Implementation)
 
 ```javascript
-// In MessageLoop.js - modify the response callback
+// MessageLoop now uses DataSender automatically
 this.responseObserver = window.DOMUtils.waitForResponse(async (response) => {
   console.log("🎉 Response received in loop");
 
-  // Existing functionality
-  self.waitingForResponse = false;
-  self.responseObserver = null;
+  // Store locally
   window.ResponseTracker.addResponse(response);
 
-  // NEW: Send to external server with automatic action routing
-  if (window.FetchSender) {
-    try {
-      // Parse response to check for action field
-      const jsonResponse = JSON.parse(response);
+  // Send via unified DataSender pipeline
+  const result = await window.DataSender.sendExtractedResponse(response, {
+    source: 'messageLoop',
+    loopIteration: self.attemptCount,
+    timestamp: new Date().toISOString()
+  });
 
-      // Automatically routes based on action field
-      await window.FetchSender.sendJSON(jsonResponse);
-      console.log("📡 Response sent to external server with action routing");
-    } catch (parseError) {
-      // Fallback for non-JSON responses
-      await window.FetchSender.sendResponse(response, {
-        loopIteration: self.attemptCount,
-        timestamp: new Date().toISOString(),
-      });
-      console.log("📡 Non-JSON response sent to default endpoint");
-    }
+  if (result.success) {
+    console.log("📡 Response sent via DataSender → FetchSender pipeline");
   }
 
   // Continue loop
@@ -115,6 +113,10 @@ this.responseObserver = window.DOMUtils.waitForResponse(async (response) => {
   }
 });
 ```
+
+## Direct FetchSender Usage (Legacy)
+
+For backward compatibility, FetchSender can still be used directly, but DataSender is recommended:
 
 ## Configuration
 

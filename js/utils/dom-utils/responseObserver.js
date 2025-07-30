@@ -84,11 +84,36 @@
                       const fullText = contentElement.innerText;
                       console.log("🔍 Full text to search:", fullText.substring(0, 200) + "...");
                       
-                      // Look for JSON pattern
-                      const jsonMatch = fullText.match(/\{[\s\S]*?\}/);
-                      if (jsonMatch) {
-                        jsonText = jsonMatch[0];
-                        console.log("🔍 Found JSON via regex:", jsonText.substring(0, 100) + "...");
+                      // Enhanced JSON extraction for complex nested structures
+                      const jsonStart = fullText.indexOf('{');
+                      if (jsonStart !== -1) {
+                        // Find the matching closing brace by counting braces
+                        let braceCount = 0;
+                        let jsonEnd = -1;
+                        
+                        for (let i = jsonStart; i < fullText.length; i++) {
+                          if (fullText[i] === '{') {
+                            braceCount++;
+                          } else if (fullText[i] === '}') {
+                            braceCount--;
+                            if (braceCount === 0) {
+                              jsonEnd = i;
+                              break;
+                            }
+                          }
+                        }
+                        
+                        if (jsonEnd !== -1) {
+                          jsonText = fullText.substring(jsonStart, jsonEnd + 1);
+                          console.log("🔍 Found complete JSON via brace matching:", jsonText.substring(0, 100) + "...");
+                        } else {
+                          // Fallback to simple regex for incomplete JSON
+                          const jsonMatch = fullText.match(/\{[\s\S]*$/);
+                          if (jsonMatch) {
+                            jsonText = jsonMatch[0];
+                            console.log("🔍 Found incomplete JSON via regex:", jsonText.substring(0, 100) + "...");
+                          }
+                        }
                       }
                     }
 
@@ -101,6 +126,17 @@
 
                   console.log("📝 RAW JSON TEXT:", jsonText);
                   console.log("📊 JSON TEXT LENGTH:", jsonText?.length || 0);
+
+                  // Clean up ChatGPT UI artifacts (Copy, Edit buttons, etc.)
+                  if (jsonText) {
+                    // Find the first { and start JSON from there
+                    const jsonStart = jsonText.indexOf('{');
+                    if (jsonStart > 0) {
+                      const originalText = jsonText;
+                      jsonText = jsonText.substring(jsonStart);
+                      console.log("🧹 Cleaned JSON TEXT:", jsonText.substring(0, 100) + "...");
+                    }
+                  }
 
                   if (!jsonText) {
                     console.log("⏳ No response found yet, checking again...");
@@ -128,18 +164,47 @@
                     return;
                   }
 
-                  // Try to parse as JSON to check if complete
+                  // Enhanced JSON completion detection
                   let isValidJson = false;
                   let jsonData = null;
 
+                  // First, check if JSON structure looks complete
+                  const openBraces = (jsonText.match(/\{/g) || []).length;
+                  const closeBraces = (jsonText.match(/\}/g) || []).length;
+                  const openBrackets = (jsonText.match(/\[/g) || []).length;
+                  const closeBrackets = (jsonText.match(/\]/g) || []).length;
+
+                  console.log(`🔍 JSON structure check: {${openBraces}/${closeBraces}} [${openBrackets}/${closeBrackets}]`);
+
+                  // Check if braces and brackets are balanced
+                  if (openBraces !== closeBraces || openBrackets !== closeBrackets) {
+                    console.log("⚠️ JSON structure incomplete - braces/brackets not balanced, waiting...");
+                    if (checkCount < maxChecks) {
+                      setTimeout(checkForCompleteResponse, 3000);
+                    }
+                    return;
+                  }
+
+                  // Check if JSON ends properly (not cut off mid-word)
+                  const trimmedJson = jsonText.trim();
+                  if (!trimmedJson.endsWith('}') && !trimmedJson.endsWith(']')) {
+                    console.log("⚠️ JSON doesn't end properly, still generating...");
+                    if (checkCount < maxChecks) {
+                      setTimeout(checkForCompleteResponse, 3000);
+                    }
+                    return;
+                  }
+
+                  // Now try to parse as JSON
                   try {
                     jsonData = JSON.parse(jsonText);
                     isValidJson = true;
                     console.log("✅ Valid complete JSON found:", jsonData);
                   } catch (e) {
-                    console.log("⚠️ Incomplete JSON - still generating, waiting 5 seconds...");
+                    console.log("⚠️ JSON parse failed despite structure check:", e.message);
+                    console.log("🔍 Problematic JSON:", jsonText.substring(0, 200) + "...");
                     if (checkCount < maxChecks) {
-                      setTimeout(checkForCompleteResponse, 5000);
+                      setTimeout(checkForCompleteResponse, 3000);
                     }
                     return;
                   }

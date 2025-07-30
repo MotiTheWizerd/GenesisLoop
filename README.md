@@ -29,41 +29,78 @@ A Chrome extension that automates interactions with ChatGPT by sending predefine
 
 ## Recent Updates
 
-### Modular DOM Utilities Architecture (Latest)
+### DataSender Unified Architecture (Latest)
 
-- ✅ **Restructured DOM utilities into modular components**
-  - Split large domUtils.js into focused, reusable modules
-  - Created dedicated responseObserver.js for response detection
-  - Separated elementFinder.js for UI element location
-  - Isolated debugUtils.js for debugging functionality
-- ✅ **Converted ES6 modules to browser-compatible IIFE pattern**
-  - Fixed "Cannot use import statement outside a module" errors
-  - Maintained backward compatibility with existing code
-  - Proper script loading order in manifest.json
-- ✅ **Enhanced element detection with multiple fallback strategies**
-  - Robust textarea and send button detection
-  - Position-based element finding as fallback
-  - SVG icon-based button identification
-  - Comprehensive error handling and logging
+- ✅ **Centralized Data Transmission Pipeline**
 
-### Dependency Loading System
+  - Created DataSender module as single source of truth for all response processing
+  - Eliminated duplicate sending logic between MessageLoop and MessageSender
+  - Unified validation, processing, and routing for all responses
+  - Enhanced metadata enrichment and error handling
 
-- ✅ Fixed ResponseTracker loading problems
-- ✅ Added fallback mechanisms for missing dependencies
-- ✅ Improved error handling and retry logic
-- ✅ Enhanced debugging and logging
-- ✅ Made ResponseTracker optional with automatic fallback creation
-- ✅ Smart dependency loading with proper module initialization order
+- ✅ **MessageLoop Integration with DataSender**
 
-### Robustness Improvements
+  - Migrated MessageLoop to use DataSender for all response transmission
+  - Maintained backward compatibility with fallback methods
+  - Added rich metadata context (source, iteration count, timestamps)
+  - Preserved all existing functionality while improving architecture
 
-- ✅ Better script loading order management
-- ✅ Graceful degradation when components fail to load
-- ✅ Enhanced retry mechanisms with limits
-- ✅ Comprehensive error logging
-- ✅ Modular architecture for easier maintenance and testing
+- ✅ **MessageSender Integration with DataSender**
+  - Updated MessageSender to use DataSender for response handling
+  - Eliminated dual observer conflicts and duplicate processing
+  - Maintained standalone functionality with graceful degradation
+  - Enhanced error handling and logging
+
+### Unified Data Flow Benefits
+
+- ✅ **Single Pipeline**: All responses flow through one centralized system
+- ✅ **No Duplicates**: Eliminated duplicate server requests and processing
+- ✅ **Consistent Processing**: Same validation and routing for all responses
+- ✅ **Enhanced Debugging**: Unified logging and monitoring across all components
+- ✅ **Maintainable Architecture**: Clean separation of concerns with clear data flow
+
+### Previous Improvements
+
+- ✅ Modular DOM utilities architecture with focused components
+- ✅ Robust dependency loading system with fallback mechanisms
+- ✅ Enhanced element detection with multiple fallback strategies
+- ✅ Response-driven message loop with comprehensive error handling
 
 ## Architecture
+
+### Unified Data Pipeline
+
+The extension uses a centralized data pipeline where all ChatGPT responses flow through a single processing system:
+
+```
+ChatGPT Response → ResponseObserver → DataSender → FetchSender → Server
+                                        ↑
+                    MessageLoop ────────┘
+                    MessageSender ──────┘
+```
+
+### Core Components
+
+#### DataSender (`js/utils/dataSender.js`)
+
+- **Purpose**: Centralized data transmission pipeline for all responses
+- **Key Features**:
+  - Unified response processing and validation
+  - Automatic JSON/text detection and parsing
+  - Action-based routing through FetchSender
+  - Rich metadata enrichment and error handling
+  - Backward compatibility with fallback mechanisms
+
+#### FetchSender (`js/utils/fetchSender.js`)
+
+- **Purpose**: HTTP transport layer with intelligent action-based routing
+- **Supported Routes**:
+  - `"action": "reflect"` → `/tasks/reflect`
+  - `"action": "directory_search"` → `/directory/search`
+  - `"action": "list_directory"` → `/directory/search` (NEW)
+  - `"action": "memory_status"` → `/memory/status`
+  - `"action": "remember_past_reflections"` → `/memory/get_reflections_logs`
+  - Default → `/` (base endpoint)
 
 ### DOM Utilities Modular Design
 
@@ -143,10 +180,12 @@ The extension uses IIFE (Immediately Invoked Function Expression) pattern instea
 │   └── extension_icon_128x128.png
 ├── js/                     # JavaScript modules
 │   ├── components/         # UI and functional components
-│   │   ├── MessageSender.js    # Handles sending messages to ChatGPT
+│   │   ├── MessageSender.js    # Message injection (uses DataSender)
 │   │   ├── ToggleButton.js     # Creates and manages the toggle button
-│   │   └── MessageLoop.js      # Manages the response-driven message loop
+│   │   └── MessageLoop.js      # Response-driven automation (uses DataSender)
 │   └── utils/              # Utility functions and helpers
+│       ├── dataSender.js       # Centralized data transmission pipeline
+│       ├── fetchSender.js      # HTTP transport layer with action routing
 │       ├── dom-utils/          # Modular DOM manipulation utilities
 │       │   ├── index.js            # Main entry point - aggregates all DOM utilities
 │       │   ├── responseObserver.js # Advanced response detection and monitoring
@@ -170,6 +209,7 @@ After making changes:
 3. Check the browser console for debugging information
 4. Look for these success messages:
    - ✅ Constants loaded
+   - ✅ DataSender loaded successfully
    - ✅ ResponseObserver loaded
    - ✅ ElementFinder loaded
    - ✅ DebugUtils loaded

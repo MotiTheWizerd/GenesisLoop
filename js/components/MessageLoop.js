@@ -456,18 +456,59 @@
     },
 
     /**
-     * Send extracted JSON response to server
+     * Send extracted JSON response to server using DataSender
      * @param {string} response - The JSON response text from ChatGPT
      */
     sendResponseToServer: async function(response) {
       try {
-        console.log("📡 Attempting to send response to server...");
+        console.log("📡 MessageLoop: Sending response via DataSender...");
+
+        // Check if DataSender is available, fallback to old method if not
+        if (typeof window.DataSender !== "undefined") {
+          console.log("✅ Using DataSender for response transmission");
+          
+          const result = await window.DataSender.sendExtractedResponse(response, {
+            source: 'messageLoop',
+            loopIteration: this.attemptCount,
+            timestamp: new Date().toISOString()
+          });
+
+          if (result.success) {
+            console.log("📡 MessageLoop: Response sent successfully via DataSender");
+          } else {
+            console.error("❌ MessageLoop: DataSender failed:", result.error);
+          }
+          
+          return result;
+        } else {
+          // Fallback to original method if DataSender not available
+          console.warn("⚠️ DataSender not available, using fallback method");
+          return this.sendResponseToServerFallback(response);
+        }
+
+      } catch (error) {
+        console.error("❌ MessageLoop: Error sending response to server:", error);
+        return {
+          success: false,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        };
+      }
+    },
+
+    /**
+     * Fallback method for sending responses (original logic)
+     * @param {string} response - The JSON response text from ChatGPT
+     */
+    sendResponseToServerFallback: async function(response) {
+      try {
+        console.log("📡 MessageLoop: Using fallback sending method...");
         console.log("📄 Response to send:", response?.substring(0, 100) + "...");
 
         // Check if FetchSender is available
         if (typeof window.FetchSender === "undefined") {
           console.warn("⚠️ FetchSender not available - cannot send response to server");
-          return;
+          return { success: false, error: "FetchSender not available" };
         }
 
         // Try to parse the response as JSON
@@ -484,7 +525,7 @@
           } else {
             console.error("❌ Failed to send text response to server:", result.error);
           }
-          return;
+          return result;
         }
 
         // Send JSON data to server
@@ -496,8 +537,15 @@
           console.error("❌ Failed to send JSON response to server:", result.error);
         }
 
+        return result;
+
       } catch (error) {
-        console.error("❌ Error sending response to server:", error);
+        console.error("❌ Error in fallback sending method:", error);
+        return {
+          success: false,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        };
       }
     },
   };

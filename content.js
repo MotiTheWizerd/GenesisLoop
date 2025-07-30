@@ -26,6 +26,11 @@
       window.DependencyLoader.waitForDependencies(() => {
         console.log("✅ Dependencies ready, creating toggle button");
         
+        // Initialize DOM Control System
+        if (typeof window.DOMControlSystem !== 'undefined') {
+          window.DOMControlSystem.initialize();
+        }
+        
         // Ensure ResponseTracker exists before creating button
         if (typeof window.ResponseTracker === 'undefined') {
           console.log("🔧 Creating ResponseTracker fallback");

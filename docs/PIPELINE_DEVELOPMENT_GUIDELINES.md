@@ -8,14 +8,16 @@ This document provides guidelines for agents working on the Genesis Loop pipelin
 
 ### Core Components (DO NOT MODIFY)
 1. **ResponseObserver** (`js/utils/dom-utils/responseObserver.js`) - CRITICAL: See `CRITICAL_RESPONSE_OBSERVER_INSTRUCTIONS.md`
-2. **MessageLoop** (`js/components/MessageLoop.js`) - Handles response-driven message flow
-3. **MessageSender** (`js/components/MessageSender.js`) - Sends messages to ChatGPT
-4. **ToggleButton** (`js/components/ToggleButton.js`) - UI control for starting/stopping
+2. **DataSender** (`js/utils/dataSender.js`) - Centralized data transmission pipeline
+3. **MessageLoop** (`js/components/MessageLoop.js`) - Response-driven message flow (now uses DataSender)
+4. **MessageSender** (`js/components/MessageSender.js`) - Message injection (now uses DataSender)
+5. **ToggleButton** (`js/components/ToggleButton.js`) - UI control for starting/stopping
 
 ### Extension Points (Safe to Modify)
-1. **FetchSender** (`js/utils/fetchSender.js`) - Server communication
-2. **ResponseTracker** (`js/utils/responseTracker.js`) - Response storage
+1. **FetchSender** (`js/utils/fetchSender.js`) - HTTP transport layer (used by DataSender)
+2. **ResponseTracker** (`js/utils/responseTracker.js`) - Response storage and analysis
 3. **Constants** (`js/utils/constants.js`) - Configuration values
+4. **DataSender Configuration** - Processing and routing behavior
 
 ## 🚦 Development Rules
 
@@ -26,24 +28,29 @@ This document provides guidelines for agents working on the Genesis Loop pipelin
 - JSON parsing and validation logic
 
 ### 🟡 YELLOW ZONE - Modify with Extreme Care
-- `js/components/MessageLoop.js` - Only add features, don't change core flow
-- `js/components/MessageSender.js` - Don't modify the sending mechanism
+- `js/utils/dataSender.js` - Only extend functionality, don't change core pipeline
+- `js/components/MessageLoop.js` - Only add features, don't change DataSender integration
+- `js/components/MessageSender.js` - Don't modify the DataSender integration
 - `js/components/ToggleButton.js` - UI changes only
 
 ### 🟢 GREEN ZONE - Safe to Modify
-- `js/utils/fetchSender.js` - Server endpoints and communication
+- `js/utils/fetchSender.js` - HTTP transport configuration and endpoints
 - `js/utils/responseTracker.js` - Response storage and analysis
 - `js/utils/constants.js` - Configuration values
+- DataSender configuration and metadata
 - New utility modules in `js/utils/`
 
 ## 📋 Before Making Changes
 
-### 1. Understand the Flow
+### 1. Understand the Unified Flow
 ```
 User clicks toggle → ToggleButton starts MessageLoop → 
 MessageLoop sends heartbeat → ResponseObserver detects JSON response → 
+DataSender processes response → FetchSender sends to server → 
 MessageLoop continues → Repeat
 ```
+
+**Key Change**: All responses now flow through the DataSender pipeline for centralized processing, validation, and routing.
 
 ### 2. Test Current System
 - Load the extension
@@ -53,29 +60,42 @@ MessageLoop continues → Repeat
 - Verify the loop continues automatically
 
 ### 3. Identify Your Integration Point
-- **Server communication?** → Modify `FetchSender`
+- **Data processing/validation?** → Extend `DataSender` configuration
+- **Server communication?** → Modify `FetchSender` (transport layer)
 - **Response analysis?** → Modify `ResponseTracker`
 - **New UI features?** → Create new components
-- **Configuration?** → Modify `Constants`
+- **Configuration?** → Modify `Constants` or DataSender config
 
 ## 🔧 Safe Development Patterns
 
-### Adding New Server Endpoints
+### Adding New Action Routes
 ```javascript
-// In fetchSender.js - ADD new methods, don't modify existing ones
-sendNewData: async function(data) {
-  try {
-    const response = await fetch(`${this.baseUrl}/new-endpoint`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    return await response.json();
-  } catch (error) {
-    console.error('❌ New endpoint error:', error);
-    return { success: false, error: error.message };
+// Add new action routes to FetchSender (preferred method)
+window.FetchSender.addActionRoute("analyze", "analyze");
+window.FetchSender.addActionRoute("generate", "content/generate");
+
+// Or extend DataSender processing for new response types
+window.DataSender.updateConfig({
+  customProcessors: {
+    'analyze': (response) => {
+      // Custom processing for analyze responses
+      return processAnalyzeResponse(response);
+    }
   }
-}
+});
+```
+
+### Adding Custom Data Processing
+```javascript
+// Extend DataSender with custom metadata
+const result = await window.DataSender.sendExtractedResponse(response, {
+  source: 'your_component',
+  customField: 'your_value',
+  processingHints: {
+    priority: 'high',
+    category: 'analysis'
+  }
+});
 ```
 
 ### Adding Response Processing

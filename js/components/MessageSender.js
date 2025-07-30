@@ -296,28 +296,101 @@
     },
 
     /**
-     * Function called after signal is sent
+     * Function called after signal is sent - now uses DataSender for centralized handling
      */
     onSignalSent: function () {
-      console.log("📡 Signal sent — initializing observer...");
+      console.log("📡 MessageSender: Signal sent — setting up response handling via DataSender...");
+
+      // Check if DataSender is available for centralized handling
+      if (typeof window.DataSender !== 'undefined') {
+        console.log("✅ MessageSender: Using DataSender for response handling");
+        return this.onSignalSentWithDataSender();
+      } else {
+        console.warn("⚠️ MessageSender: DataSender not available, using fallback method");
+        return this.onSignalSentFallback();
+      }
+    },
+
+    /**
+     * Modern response handling using DataSender
+     */
+    onSignalSentWithDataSender: function () {
+      console.log("📡 MessageSender: Using DataSender-based response handling");
+
+      return new Promise((resolve, reject) => {
+        // Use DOMUtils response observer (same as MessageLoop)
+        if (typeof window.DOMUtils === 'undefined') {
+          console.error("❌ MessageSender: DOMUtils not available");
+          reject(new Error("DOMUtils not available"));
+          return;
+        }
+
+        console.log("👁️ MessageSender: Setting up DOMUtils response observer");
+        
+        const observer = window.DOMUtils.waitForResponse(async (response) => {
+          try {
+            console.log("🎉 MessageSender: Response received via DOMUtils observer");
+            console.log("📄 MessageSender: Response preview:", response?.substring(0, 100) + "...");
+
+            // Send through DataSender
+            const result = await window.DataSender.sendExtractedResponse(response, {
+              source: 'messageSender',
+              standalone: true,
+              timestamp: new Date().toISOString()
+            });
+
+            if (result.success) {
+              console.log("✅ MessageSender: Response sent successfully via DataSender");
+              
+              // Try to parse for resolve value
+              try {
+                const jsonData = JSON.parse(response);
+                resolve(jsonData);
+              } catch (parseError) {
+                // Not JSON, resolve with text
+                resolve(response);
+              }
+            } else {
+              console.error("❌ MessageSender: DataSender failed:", result.error);
+              reject(new Error(result.error));
+            }
+
+          } catch (error) {
+            console.error("❌ MessageSender: Error in DataSender response handling:", error);
+            reject(error);
+          }
+        });
+
+        if (!observer) {
+          console.error("❌ MessageSender: Failed to create response observer");
+          reject(new Error("Failed to create response observer"));
+        }
+      });
+    },
+
+    /**
+     * Fallback response handling (original logic)
+     */
+    onSignalSentFallback: function () {
+      console.log("📡 MessageSender: Using fallback response handling");
 
       const MAX_RETRIES = 10;
       let retryCount = 0;
-      let retryCooldown = false; // 👈 Debounce guard
+      let retryCooldown = false;
 
       return new Promise((resolve, reject) => {
         const observer = new MutationObserver((mutations, obs) => {
-          if (retryCooldown) return; // ⛔ Prevent overlap
+          if (retryCooldown) return;
           retryCooldown = true;
 
-          console.log("👁️ MutationObserver triggered");
+          console.log("👁️ MessageSender fallback: MutationObserver triggered");
 
           const tryScan = async () => {
             const assistants = Array.from(
               document.querySelectorAll(
                 '[data-message-author-role="assistant"]'
               )
-            ).reverse(); // newest first
+            ).reverse();
 
             for (const assistantNode of assistants) {
               const markdown = assistantNode.querySelector(".markdown");
@@ -326,35 +399,30 @@
               const text = markdown.innerText.trim();
               if (!text) continue;
 
-              console.log("📄 Found assistant response:", text);
+              console.log("📄 MessageSender fallback: Found assistant response:", text);
 
               if (text.startsWith("{")) {
-                console.log("✅ Found potential JSON:", text);
+                console.log("✅ MessageSender fallback: Found potential JSON:", text);
 
                 const openCount = (text.match(/{/g) || []).length;
                 const closeCount = (text.match(/}/g) || []).length;
 
                 if (openCount !== closeCount || !text.endsWith("}")) {
-                  console.log(
-                    "⏳ JSON still streaming... waiting for completion"
-                  );
-                  return false; // try again on next retry
+                  console.log("⏳ MessageSender fallback: JSON still streaming...");
+                  return false;
                 }
 
                 try {
                   const json = JSON.parse(text);
-                  console.log("📦 Parsed:", json);
+                  console.log("📦 MessageSender fallback: Parsed:", json);
 
-                  // Send JSON to default address
+                  // Send JSON using FetchSender directly (fallback)
                   if (window.FetchSender) {
                     try {
                       await window.FetchSender.sendJSON(json);
-                      console.log("📡 JSON sent to server successfully");
+                      console.log("📡 MessageSender fallback: JSON sent successfully");
                     } catch (fetchError) {
-                      console.error(
-                        "❌ Failed to send JSON to server:",
-                        fetchError
-                      );
+                      console.error("❌ MessageSender fallback: Send failed:", fetchError);
                     }
                   }
 
@@ -362,7 +430,7 @@
                   resolve(json);
                   return true;
                 } catch (e) {
-                  console.error("❌ Parse error:", e);
+                  console.error("❌ MessageSender fallback: Parse error:", e);
                   observer.disconnect();
                   reject(e);
                   return true;
@@ -378,17 +446,15 @@
 
             retryCount++;
             if (retryCount < MAX_RETRIES) {
-              console.log(`🔁 Retry ${retryCount}/${MAX_RETRIES}`);
+              console.log(`🔁 MessageSender fallback: Retry ${retryCount}/${MAX_RETRIES}`);
               setTimeout(async () => {
-                retryCooldown = false; // 👈 Allow next MutationObserver trigger
+                retryCooldown = false;
                 await retryLoop();
-              }, 2000); // 👈 Your desired delay
+              }, 2000);
             } else {
-              console.warn("❌ Max retries reached, no valid response found.");
+              console.warn("❌ MessageSender fallback: Max retries reached");
               obs.disconnect();
-              reject(
-                new Error("Max retries reached without finding valid JSON.")
-              );
+              reject(new Error("Max retries reached without finding valid JSON."));
             }
           };
 
@@ -396,7 +462,7 @@
         });
 
         setTimeout(() => {
-          console.log("🔗 Observer attached");
+          console.log("🔗 MessageSender fallback: Observer attached");
           observer.observe(document.body, {
             childList: true,
             subtree: true,

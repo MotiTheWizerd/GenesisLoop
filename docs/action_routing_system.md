@@ -17,10 +17,12 @@ The `ResponseObserver` extracts JSON responses from ChatGPT:
 }
 ```
 
-### 2. Action Detection
-`FetchSender.sendJSON()` automatically detects the `action` field and routes accordingly:
+### 2. Action Detection (Via DataSender Pipeline)
+`DataSender.sendExtractedResponse()` processes responses and routes through `FetchSender.sendJSON()`:
 - **With action**: Routes to `baseUrl/[route]` (e.g., `localhost:8000/reflect`)
 - **Without action**: Routes to default `baseUrl` (e.g., `localhost:8000/`)
+
+The routing happens automatically within the unified DataSender pipeline.
 
 ### 3. Route Configuration
 Default routes are configured in `FetchSender.config.actionRoutes`:
@@ -45,17 +47,28 @@ actionRoutes: {
 
 ## Usage Examples
 
-### Automatic Routing (Current Flow)
+### Automatic Routing (Current Flow via DataSender)
 ```javascript
-// JSON response from ChatGPT
-const response = {
-  "action": "reflect",
-  "status": "success", 
-  "message": "Reflecting on consciousness..."
-};
+// JSON response extracted from ChatGPT
+const response = '{"action": "reflect", "status": "success", "message": "Reflecting on consciousness..."}';
 
-// Automatically routes to localhost:8000/reflect
-await window.FetchSender.sendJSON(response);
+// Processed through unified DataSender pipeline
+const result = await window.DataSender.sendExtractedResponse(response, {
+  source: 'messageLoop',
+  timestamp: new Date().toISOString()
+});
+
+// DataSender automatically:
+// 1. Parses JSON
+// 2. Detects action: "reflect"  
+// 3. Routes to localhost:8000/reflect via FetchSender
+// 4. Returns unified result with processing metadata
+```
+
+### Legacy Direct FetchSender Usage
+```javascript
+// Still supported for backward compatibility
+await window.FetchSender.sendJSON(jsonData);
 ```
 
 ### Manual Route Management
@@ -143,25 +156,34 @@ app.post('/', (req, res) => {
 });
 ```
 
-## Integration with Message Loop
+## Integration with Unified Pipeline
 
-The routing system integrates seamlessly with the existing message loop:
+The routing system integrates seamlessly with the DataSender pipeline:
 
-### 1. Heartbeat Request
+### 1. Heartbeat Request (Unchanged)
 ```javascript
 // MessageLoop gets heartbeat data
 const heartbeatResult = await window.FetchSender.getHeartbeat();
 // Sends heartbeat JSON to ChatGPT
 ```
 
-### 2. Response Processing
+### 2. Response Processing (Via DataSender)
 ```javascript
 // ResponseObserver extracts JSON response
 const response = '{"action": "reflect", "message": "..."}';
 
-// MessageLoop sends to server with automatic routing
-await window.FetchSender.sendJSON(JSON.parse(response));
-// Automatically routes to /reflect endpoint
+// MessageLoop sends via DataSender pipeline with automatic routing
+const result = await window.DataSender.sendExtractedResponse(response, {
+  source: 'messageLoop',
+  loopIteration: this.attemptCount
+});
+
+// DataSender handles:
+// - JSON parsing and validation
+// - Action detection ("reflect")
+// - Automatic routing to /reflect endpoint via FetchSender
+// - Error handling and retries
+// - Response metadata enrichment
 ```
 
 ## Error Handling
