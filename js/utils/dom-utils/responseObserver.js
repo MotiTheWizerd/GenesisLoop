@@ -197,16 +197,42 @@
 
                   // Now try to parse as JSON
                   try {
+                    // First attempt: Parse as-is
                     jsonData = JSON.parse(jsonText);
                     isValidJson = true;
                     console.log("✅ Valid complete JSON found:", jsonData);
                   } catch (e) {
-                    console.log("⚠️ JSON parse failed despite structure check:", e.message);
-                    console.log("🔍 Problematic JSON:", jsonText.substring(0, 200) + "...");
-                    if (checkCount < maxChecks) {
-                      setTimeout(checkForCompleteResponse, 3000);
+                    console.log("⚠️ JSON parse failed, attempting to fix nested quotes...");
+                    
+                    try {
+                      // Attempt to fix nested JSON quotes in query field
+                      let fixedJsonText = jsonText;
+                      
+                      // Fix the specific pattern: "query": "{"key": "value"}"
+                      // Replace with: "query": "{\"key\": \"value\"}"
+                      fixedJsonText = fixedJsonText.replace(
+                        /"query":\s*"(\{[^}]*\})"/g,
+                        (match, innerJson) => {
+                          // Escape quotes in the inner JSON
+                          const escapedInnerJson = innerJson.replace(/"/g, '\\"');
+                          return `"query": "${escapedInnerJson}"`;
+                        }
+                      );
+                      
+                      console.log("🔧 Attempting to parse fixed JSON...");
+                      jsonData = JSON.parse(fixedJsonText);
+                      isValidJson = true;
+                      console.log("✅ Fixed JSON parsed successfully:", jsonData);
+                      
+                    } catch (fixError) {
+                      console.log("⚠️ JSON fix attempt failed:", fixError.message);
+                      console.log("🔍 Original error:", e.message);
+                      console.log("🔍 Problematic JSON:", jsonText.substring(0, 200) + "...");
+                      if (checkCount < maxChecks) {
+                        setTimeout(checkForCompleteResponse, 3000);
+                      }
+                      return;
                     }
-                    return;
                   }
 
                   // We have valid JSON - capture it

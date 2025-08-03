@@ -61,7 +61,7 @@
       if (window.MessageLoop.isRunning) {
         console.log("⏹️ Stopping message loop");
         window.MessageLoop.stopLoop();
-        this.resetToggleButton();
+        window.ToggleButton.resetToggleButton();
       } else {
         console.log("▶️ Starting message loop");
         const elements = window.DOMUtils.findRequiredElements();

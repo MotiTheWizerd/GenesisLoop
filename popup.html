@@ -1,63 +1,654 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <style>
-      body {
-        min-width: 250px;
-        font-family: sans-serif;
-        text-align: center;
-        padding: 15px;
-        color: #333;
-      }
-      h2 {
-        color: #10a37f;
-        margin-top: 0;
-      }
-      .description {
-        font-size: 14px;
-        margin-bottom: 15px;
-      }
-      .custom-text {
-        width: 100%;
-        padding: 8px;
-        margin-bottom: 10px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        box-sizing: border-box;
-      }
-      .save-btn {
-        background-color: #10a37f;
-        color: white;
-        border: none;
-        padding: 8px 15px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: bold;
-      }
-      .save-btn:hover {
-        background-color: #0c8c6e;
-      }
-      .status {
-        margin-top: 10px;
-        font-size: 12px;
-        color: #666;
-      }
-    </style>
-  </head>
-  <body>
-    <h2>Genesis Loop</h2>
-    <div class="description">
-      Click the 🔄 Loop button on ChatGPT to send <code>&lt;test&gt;</code> messages and automatically wait for responses.
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ray Control Center</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 420px;
+      height: 600px;
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    /* Animated background */
+    body::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      padding: 20px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 25px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+
+    .header .subtitle {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 400;
+    }
+
+    /* Status indicator */
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .status-text {
+      font-size: 12px;
+      color: #4ade80;
+      font-weight: 500;
+    }
+
+    /* Sections */
+    .section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      backdrop-filter: blur(10px);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .section-icon {
+      font-size: 18px;
+    }
+
+    /* Power Control */
+    .power-section .section-icon {
+      color: #ef4444;
+    }
+
+    .power-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .power-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .power-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .power-desc {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Heartbeat Section */
+    .heartbeat-section .section-icon {
+      color: #ec4899;
+    }
+
+    .heartbeat-control {
+      margin-bottom: 16px;
+    }
+
+    .heartbeat-display {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .heartbeat-label {
+      font-size: 14px;
+      color: #ffffff;
+    }
+
+    .heartbeat-value {
+      font-size: 14px;
+      font-weight: 600;
+      color: #ec4899;
+    }
+
+    .heartbeat-slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.1);
+      outline: none;
+      -webkit-appearance: none;
+      margin-bottom: 12px;
+    }
+
+    .heartbeat-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ec4899, #be185d);
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4);
+    }
+
+    .heartbeat-slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ec4899, #be185d);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4);
+    }
+
+    .heartbeat-presets {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .preset-btn {
+      flex: 1;
+      padding: 8px 12px;
+      background: rgba(236, 72, 153, 0.1);
+      border: 1px solid rgba(236, 72, 153, 0.3);
+      border-radius: 6px;
+      color: #ec4899;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .preset-btn:hover {
+      background: rgba(236, 72, 153, 0.2);
+      border-color: rgba(236, 72, 153, 0.5);
+    }
+
+    .preset-btn:active {
+      transform: scale(0.98);
+    }
+
+    .heartbeat-status {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.4;
+      white-space: pre-line;
+    }
+
+    /* Systems Section */
+    .systems-section .section-icon {
+      color: #10b981;
+    }
+
+    .system-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .system-item:last-child {
+      border-bottom: none;
+    }
+
+    .system-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .system-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #ffffff;
+    }
+
+    .system-desc {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Toggle Switch */
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+    }
+
+    .toggle-input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.2);
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      transition: 0.3s;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle-input:checked + .toggle-slider {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .toggle-input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Quick Actions */
+    .actions-section .section-icon {
+      color: #f59e0b;
+    }
+
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .action-btn {
+      padding: 12px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .action-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .action-btn:active {
+      transform: translateY(0);
+    }
+
+    .action-btn.enable-all {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+    }
+
+    .action-btn.disable-all {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+    }
+
+    .action-btn.voice-only {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+    }
+
+    /* Status Section */
+    .status-section .section-icon {
+      color: #8b5cf6;
+    }
+
+    .system-status {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      margin-top: 20px;
+    }
+
+    .footer-text {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Loading state */
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      margin: -10px 0 0 -10px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top: 2px solid #ffffff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🤖 Ray Control Center</h1>
+      <p class="subtitle">Advanced AI Consciousness Management</p>
+      <div class="status-indicator">
+        <div class="status-dot"></div>
+        <span class="status-text" id="connectionStatus">Connected</span>
+      </div>
     </div>
-    <div class="status">
-      Button will appear in the top-right corner of ChatGPT's interface.
+
+    <!-- Power Control Section -->
+    <div class="section power-section">
+      <div class="section-header">
+        <span class="section-icon">⚡</span>
+        <span class="section-title">Master Power</span>
+      </div>
+      <div class="power-toggle">
+        <div class="power-info">
+          <div class="power-label">System Power</div>
+          <div class="power-desc">Controls all Ray systems</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" class="toggle-input" id="masterPowerToggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
     </div>
-    
-    <div class="response-info">
-      <p>The extension will wait for each ChatGPT response to complete before sending the next message.</p>
-      <button id="view-responses" class="save-btn">View Responses</button>
+
+    <!-- Heartbeat Configuration Section -->
+    <div class="section heartbeat-section">
+      <div class="section-header">
+        <span class="section-icon">💓</span>
+        <span class="section-title">Heartbeat Configuration</span>
+      </div>
+      
+      <div class="heartbeat-control">
+        <div class="heartbeat-display">
+          <span class="heartbeat-label">Heartbeat Interval:</span>
+          <span class="heartbeat-value" id="heartbeatValue">1000ms</span>
+        </div>
+        
+        <input type="range" 
+               class="heartbeat-slider" 
+               id="heartbeatSlider" 
+               min="100" 
+               max="5000" 
+               value="1000" 
+               step="100">
+        
+        <div class="heartbeat-presets">
+          <button class="preset-btn" id="heartbeatPreset500">0.5s Fast</button>
+          <button class="preset-btn" id="heartbeatPreset1000">1s Default</button>
+          <button class="preset-btn" id="heartbeatPreset2000">2s Slow</button>
+        </div>
+        
+        <div class="heartbeat-status" id="heartbeatStatus">
+          Status: Loading...
+        </div>
+      </div>
     </div>
-    
-    <script src="popup.js"></script>
-  </body>
+
+    <!-- Systems Control Section -->
+    <div class="section systems-section">
+      <div class="section-header">
+        <span class="section-icon">🔧</span>
+        <span class="section-title">System Components</span>
+      </div>
+      
+      <div class="system-item">
+        <div class="system-info">
+          <div class="system-name">🖱️ DOM Control</div>
+          <div class="system-desc">Click, type, scroll, extract</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" class="toggle-input" id="domControlToggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      
+      <div class="system-item">
+        <div class="system-info">
+          <div class="system-name">🎤 Voice Recognition</div>
+          <div class="system-desc">Speech-to-text input</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" class="toggle-input" id="voiceRecognitionToggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      
+      <div class="system-item">
+        <div class="system-info">
+          <div class="system-name">🔊 Voice Synthesis</div>
+          <div class="system-desc">Text-to-speech output</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" class="toggle-input" id="voiceSynthesisToggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      
+      <div class="system-item">
+        <div class="system-info">
+          <div class="system-name">🔄 Message Loop</div>
+          <div class="system-desc">Automated conversations</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" class="toggle-input" id="messageLoopToggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      
+      <div class="system-item">
+        <div class="system-info">
+          <div class="system-name">📊 Response Tracking</div>
+          <div class="system-desc">Monitor and log responses</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" class="toggle-input" id="responseTrackingToggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      
+      <div class="system-item">
+        <div class="system-info">
+          <div class="system-name">📡 Data Transmission</div>
+          <div class="system-desc">Send data to backend</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" class="toggle-input" id="dataTransmissionToggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      
+      <div class="system-item">
+        <div class="system-info">
+          <div class="system-name">📁 File Operations</div>
+          <div class="system-desc">Read/write file access</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" class="toggle-input" id="fileOperationsToggle">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      
+      <div class="system-item">
+        <div class="system-info">
+          <div class="system-name">🕐 Browser Clock</div>
+          <div class="system-desc">Always available</div>
+        </div>
+        <span style="color: #10b981; font-size: 12px; font-weight: 600;">ALWAYS ON</span>
+      </div>
+    </div>
+
+    <!-- Quick Actions Section -->
+    <div class="section actions-section">
+      <div class="section-header">
+        <span class="section-icon">⚡</span>
+        <span class="section-title">Quick Actions</span>
+      </div>
+      
+      <div class="action-buttons">
+        <button class="action-btn enable-all" id="enableAllSystems">
+          <span>✅</span>
+          <span>Enable All Systems</span>
+        </button>
+        <button class="action-btn disable-all" id="disableAllSystems">
+          <span>❌</span>
+          <span>Disable All Systems</span>
+        </button>
+        <button class="action-btn voice-only" id="voiceOnlyMode">
+          <span>🎤</span>
+          <span>Voice Only Mode</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- System Status Section -->
+    <div class="section status-section">
+      <div class="section-header">
+        <span class="section-icon">📊</span>
+        <span class="section-title">System Status</span>
+      </div>
+      
+      <div class="system-status" id="systemStatus">
+        Loading system status...
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p class="footer-text">Ray Control Center - Advanced AI Management Interface</p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
 </html>

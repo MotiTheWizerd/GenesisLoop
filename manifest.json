@@ -1,54 +1,95 @@
 {
-    "manifest_version": 3,
-    "name": "Genesis Loop",
-    "version": "1.0",
-    "description": "Insert predefined text into ChatGPT with a single click",
-    "action": {
-      "default_popup": "popup.html",
-      "default_icon": {
-        "16": "icons/extension_icon_16x16.png",
-        "48": "icons/extension_icon_48x48.png",
-        "128": "icons/extension_icon_128x128.png"
-      }
-    },
-    "icons": {
+  "manifest_version": 3,
+  "name": "Genesis Loop",
+  "version": "1.0",
+  "description": "Insert predefined text into ChatGPT with a single click",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
       "16": "icons/extension_icon_16x16.png",
       "48": "icons/extension_icon_48x48.png",
       "128": "icons/extension_icon_128x128.png"
-    },
-    "permissions": [
-      "storage",
-      "activeTab",
-      "scripting"
-    ],
-    "host_permissions": [
-      "https://chatgpt.com/*",
-      "https://chat.openai.com/*",
-      "http://localhost:8000/*"
-    ],
-    "content_scripts": [
-      {
-        "matches": [
-          "https://chatgpt.com/*",
-          "https://chat.openai.com/*"
-        ],
-        "js": [
-          "js/utils/constants.js",
-          "js/utils/responseTracker.js",
-          "js/utils/fetchSender.js",
-          "js/utils/dataSender.js",
-          "js/utils/dom-utils/responseObserver.js",
-          "js/utils/dom-utils/elementFinder.js",
-          "js/utils/dom-utils/debugUtils.js",
-          "js/utils/dom-utils/index.js",
-          "js/utils/dependencyLoader.js",
-          "js/components/MessageSender.js",
-          "js/components/ToggleButton.js",
-          "js/components/MessageLoop.js",
-          "js/addons/dom-control/simple-dom-api.js",
-          "content.js"
-        ],
-        "run_at": "document_end"
-      }
-    ]
-  }
+    }
+  },
+  "icons": {
+    "16": "icons/extension_icon_16x16.png",
+    "48": "icons/extension_icon_48x48.png",
+    "128": "icons/extension_icon_128x128.png"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "http://localhost:8000/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "js/addons/dom-control/bridge/consoleBridge.js",
+        "js/addons/env-ping/environmentPinger.js"
+      ],
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*"
+      ]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://chat.openai.com/*"
+      ],
+      "js": [
+        "js/utils/constants.js",
+        "js/config/raySettings.js",
+        "js/addons/ui-toggle/rayUIToggle.js",
+        "js/utils/browserClock.js",
+        "js/addons/ray-heartbeat/rayHeartbeat.js",
+        "js/addons/ray-temporal-interface/rayTemporalInterface.js",
+        "js/addons/clock-monitor/clockMonitor.js",
+        "js/addons/clock-display/clockDisplay.js",
+        "js/addons/power-control/rayPowerControl.js",
+        "js/addons/control-panel/rayControlPanel.js",
+        "js/addons/activity-monitor/rayActivityMonitor.js",
+        "js/addons/trust-metrics/rayTrustCore.js",
+        "js/addons/trust-metrics/rayTrustUI.js",
+        "js/addons/trust-metrics/rayTrustIntegration.js",
+        "js/addons/trust-metrics/rayPromiseTracker.js",
+        "js/addons/trust-metrics/index.js",
+        "js/utils/responseTracker.js",
+        "js/utils/fetchSender.js",
+        "js/utils/dataSender.js",
+        "js/utils/dom-utils/responseObserver.js",
+        "js/utils/dom-utils/elementFinder.js",
+        "js/utils/dom-utils/debugUtils.js",
+        "js/utils/dom-utils/index.js",
+        "js/utils/dependencyLoader.js",
+        "js/components/MessageSender.js",
+        "js/components/ToggleButton.js",
+        "js/components/MessageLoop.js",
+        "js/addons/dom-control/emergency/emergencyDOMAPI.js",
+        "js/addons/dom-control/health/domHealthChecker.js",
+        "js/addons/dom-control/recovery/domRecoverySystem.js",
+        "js/addons/dom-control/simple-dom-api.js",
+        "js/addons/dom-control/ray/rayDOMInterface.js",
+        "js/RayCommandRouter/RayCommandRouter.js",
+        "js/addons/dom-control/bridge/windowBridge.js",
+        "js/addons/dom-control/init/rayDOMInit.js",
+        "js/addons/voice-recognition/voiceRecognition.js",
+        "js/addons/voice-recognition/voiceUI.js",
+        "js/addons/voice-recognition/index.js",
+        "js/addons/voice-synthesis/voiceSynthesis.js",
+        "js/addons/voice-synthesis/voiceSynthesisUI.js",
+        "js/addons/voice-synthesis/voiceSettings.js",
+        "js/addons/voice-synthesis/index.js",
+        "content.js"
+      ],
+      "run_at": "document_end"
+    }
+  ]
+}

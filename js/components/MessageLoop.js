@@ -63,7 +63,7 @@
      */
     waitForFirstResponse: function () {
       console.log("🎯 Sending first message and setting up response observer");
-      
+
       // Check if dependencies are loaded
       if (typeof window.DOMUtils === "undefined") {
         console.error("❌ Cannot wait for response - DOMUtils not loaded");
@@ -91,6 +91,18 @@
         };
       }
 
+      // Reset waiting state if loop is running (this fixes stuck state issues)
+      if (this.isRunning && this.waitingForResponse) {
+        console.log("🔄 Resetting stuck waitingForResponse state");
+        this.waitingForResponse = false;
+
+        // Also disconnect any stuck observer
+        if (this.responseObserver) {
+          this.responseObserver.disconnect();
+          this.responseObserver = null;
+        }
+      }
+
       if (this.waitingForResponse || !this.isRunning) {
         console.log(
           "⚠️ Cannot send first message - already waiting or not running"
@@ -99,18 +111,22 @@
       }
 
       const self = this;
+      const startTime = Date.now(); // Track when we started waiting
       this.waitingForResponse = true;
 
       // First, send the initial message
       console.log("🚀 Sending first heartbeat message...");
-      
+
       // Get heartbeat data and send first message
       if (typeof window.FetchSender !== "undefined") {
         window.FetchSender.getHeartbeat()
           .then((heartbeatResult) => {
             if (heartbeatResult.success) {
               const heartbeatJson = JSON.stringify(heartbeatResult.data);
-              console.log("💓 First heartbeat received, sending to ChatGPT:", heartbeatJson);
+              console.log(
+                "💓 First heartbeat received, sending to ChatGPT:",
+                heartbeatJson
+              );
 
               // Send the message using MessageSender but without its observer
               const success = window.MessageSender.sendTestMessage(
@@ -124,41 +140,202 @@
               );
 
               if (success) {
-                console.log("✅ First message sent, setting up response observer");
+                console.log(
+                  "✅ First message sent, setting up response observer"
+                );
                 // Set up our own observer to wait for response
-                self.responseObserver = window.DOMUtils.waitForResponse((response) => {
-                  console.log("🎉 FIRST RESPONSE RECEIVED! Continuing loop...");
-                  console.log("📥 Response:", response?.substring(0, 100) + "...");
+                self.responseObserver = window.DOMUtils.waitForResponse(
+                  (response) => {
+                    console.log(
+                      "🎉 FIRST RESPONSE RECEIVED! Continuing loop..."
+                    );
+                    console.log(
+                      "📥 Response:",
+                      response?.substring(0, 100) + "..."
+                    );
+
+                    self.waitingForResponse = false;
+                    self.responseObserver = null;
+
+                    // Store the response with temporal context
+                    if (typeof window.ResponseTracker !== "undefined") {
+                      window.ResponseTracker.addResponse(response, {
+                        source: "messageLoop",
+                        type: "first_response",
+                        loopIteration: self.attemptCount,
+                        waitingTime: Date.now() - startTime,
+                      });
+                      console.log(
+                        "💾 First response stored with temporal context"
+                      );
+                    }
+
+                    // Send JSON response to server
+                    self.sendResponseToServer(response);
+
+                    // Check if this is a reflect action response - if so, stop the heartbeat
+                    try {
+                      const jsonData = JSON.parse(response);
+                      if (jsonData && jsonData.action === "reflect") {
+                        console.log(
+                          "🧠 REFLECT ACTION DETECTED ON FIRST RESPONSE! Stopping heartbeat loop."
+                        );
+                        console.log(
+                          "💭 Reflection content will remain in input field for manual review/sending."
+                        );
+                        self.stopLoop();
+
+                        // Update toggle button to show stopped state
+                        if (typeof window.ToggleButton !== "undefined") {
+                          window.ToggleButton.resetToggleButton();
+                        }
+
+                        return; // Exit early - don't schedule next message
+                      }
+                    } catch (parseError) {
+                      console.log(
+                        "⚠️ First response is not JSON, continuing normal loop"
+                      );
+                    }
+
+                    // Continue the loop
+                    if (self.isRunning) {
+                      console.log("🔄 Scheduling next message...");
+                      setTimeout(() => {
+                        self.sendMessageAndWaitForResponse();
+                      }, 1000);
+                    }
+                  }
+                );
+              } else {
+                console.log("❌ First message send failed");
+                self.waitingForResponse = false;
+                self.stopLoop();
+              }
+            } else {
+              console.error(
+                "❌ First heartbeat failed:",
+                heartbeatResult.error
+              );
+              console.log("🔄 Using fallback message instead of heartbeat");
+
+              // Use fallback message when heartbeat fails
+              const fallbackMessage = JSON.stringify({
+                action: "heartbeat_fallback",
+                timestamp: new Date().toISOString(),
+                message:
+                  "Ray heartbeat - server connection failed, using fallback",
+                status: "offline_mode",
+              });
+
+              // Send the fallback message
+              const success = window.MessageSender.sendTestMessage(
+                fallbackMessage,
+                () => {
+                  console.log("❌ Fallback message send failed");
+                  self.waitingForResponse = false;
+                  self.stopLoop();
+                },
+                true // Skip MessageSender's response handling
+              );
+
+              if (success) {
+                console.log(
+                  "✅ Fallback message sent, setting up response observer"
+                );
+                // Set up our own observer to wait for response
+                self.responseObserver = window.DOMUtils.waitForResponse(
+                  (response) => {
+                    console.log(
+                      "🎉 FALLBACK RESPONSE RECEIVED! Continuing loop..."
+                    );
+                    console.log(
+                      "📥 Response:",
+                      response?.substring(0, 100) + "..."
+                    );
+
+                    self.waitingForResponse = false;
+                    self.responseObserver = null;
+
+                    // Store the response
+                    if (typeof window.ResponseTracker !== "undefined") {
+                      window.ResponseTracker.addResponse(response, {
+                        source: "messageLoop",
+                        type: "fallback_response",
+                        loopIteration: self.attemptCount,
+                        waitingTime: Date.now() - startTime,
+                      });
+                      console.log("💾 Fallback response stored");
+                    }
+
+                    // Continue the loop
+                    if (self.isRunning) {
+                      console.log("🔄 Scheduling next message...");
+                      setTimeout(() => {
+                        self.sendMessageAndWaitForResponse();
+                      }, 1000);
+                    }
+                  }
+                );
+              } else {
+                console.log("❌ Fallback message send failed");
+                self.waitingForResponse = false;
+                self.stopLoop();
+              }
+            }
+          })
+          .catch((error) => {
+            console.error("❌ First heartbeat error:", error);
+            console.log("🔄 Using fallback message due to heartbeat error");
+
+            // Use fallback message when heartbeat throws error
+            const fallbackMessage = JSON.stringify({
+              action: "heartbeat_fallback",
+              timestamp: new Date().toISOString(),
+              message: "Ray heartbeat - server error, using fallback",
+              status: "offline_mode",
+              error: error.message,
+            });
+
+            // Send the fallback message
+            const success = window.MessageSender.sendTestMessage(
+              fallbackMessage,
+              () => {
+                console.log("❌ Fallback message send failed");
+                self.waitingForResponse = false;
+                self.stopLoop();
+              },
+              true // Skip MessageSender's response handling
+            );
+
+            if (success) {
+              console.log(
+                "✅ Fallback message sent after error, setting up response observer"
+              );
+              // Set up our own observer to wait for response
+              self.responseObserver = window.DOMUtils.waitForResponse(
+                (response) => {
+                  console.log(
+                    "🎉 FALLBACK RESPONSE RECEIVED AFTER ERROR! Continuing loop..."
+                  );
+                  console.log(
+                    "📥 Response:",
+                    response?.substring(0, 100) + "..."
+                  );
 
                   self.waitingForResponse = false;
                   self.responseObserver = null;
 
                   // Store the response
                   if (typeof window.ResponseTracker !== "undefined") {
-                    window.ResponseTracker.addResponse(response);
-                    console.log("💾 First response stored");
-                  }
-
-                  // Send JSON response to server
-                  self.sendResponseToServer(response);
-
-                  // Check if this is a reflect action response - if so, stop the heartbeat
-                  try {
-                    const jsonData = JSON.parse(response);
-                    if (jsonData && jsonData.action === "reflect") {
-                      console.log("🧠 REFLECT ACTION DETECTED ON FIRST RESPONSE! Stopping heartbeat loop.");
-                      console.log("💭 Reflection content will remain in input field for manual review/sending.");
-                      self.stopLoop();
-                      
-                      // Update toggle button to show stopped state
-                      if (typeof window.ToggleButton !== "undefined") {
-                        window.ToggleButton.resetToggleButton();
-                      }
-                      
-                      return; // Exit early - don't schedule next message
-                    }
-                  } catch (parseError) {
-                    console.log("⚠️ First response is not JSON, continuing normal loop");
+                    window.ResponseTracker.addResponse(response, {
+                      source: "messageLoop",
+                      type: "fallback_error_response",
+                      loopIteration: self.attemptCount,
+                      waitingTime: Date.now() - startTime,
+                      originalError: error.message,
+                    });
+                    console.log("💾 Fallback error response stored");
                   }
 
                   // Continue the loop
@@ -168,22 +345,13 @@
                       self.sendMessageAndWaitForResponse();
                     }, 1000);
                   }
-                });
-              } else {
-                console.log("❌ First message send failed");
-                self.waitingForResponse = false;
-                self.stopLoop();
-              }
+                }
+              );
             } else {
-              console.error("❌ First heartbeat failed:", heartbeatResult.error);
+              console.log("❌ Fallback message send failed after error");
               self.waitingForResponse = false;
               self.stopLoop();
             }
-          })
-          .catch((error) => {
-            console.error("❌ First heartbeat error:", error);
-            self.waitingForResponse = false;
-            self.stopLoop();
           });
       } else {
         console.error("❌ FetchSender not available for first message");
@@ -200,14 +368,17 @@
       const self = this;
 
       // Check if DOMUtils is available
-      if (typeof window.DOMUtils === 'undefined') {
+      if (typeof window.DOMUtils === "undefined") {
         console.error("❌ DOMUtils not available for response observer");
         return;
       }
 
       console.log("🔧 DOMUtils available, calling waitForResponse...");
-      console.log("🔧 DOMUtils.waitForResponse type:", typeof window.DOMUtils.waitForResponse);
-      
+      console.log(
+        "🔧 DOMUtils.waitForResponse type:",
+        typeof window.DOMUtils.waitForResponse
+      );
+
       // Set up observer to wait for response
       this.responseObserver = window.DOMUtils.waitForResponse((response) => {
         console.log(
@@ -222,10 +393,17 @@
         self.waitingForResponse = false;
         self.responseObserver = null;
 
-        // Store the response for later analysis
+        // Store the response for later analysis with temporal context
         if (typeof window.ResponseTracker !== "undefined") {
-          window.ResponseTracker.addResponse(response);
-          console.log("💾 Continuing response stored in tracker");
+          window.ResponseTracker.addResponse(response, {
+            source: "messageLoop",
+            type: "continuing_response",
+            loopIteration: this.attemptCount,
+            isHeartbeat: true,
+          });
+          console.log(
+            "💾 Continuing response stored in tracker with temporal context"
+          );
         } else {
           console.log(
             "⚠️ ResponseTracker not available for continuing response"
@@ -239,15 +417,19 @@
         try {
           const jsonData = JSON.parse(response);
           if (jsonData && jsonData.action === "reflect") {
-            console.log("🧠 REFLECT ACTION DETECTED! Stopping heartbeat loop to prevent overwriting reflection.");
-            console.log("💭 Reflection content will remain in input field for manual review/sending.");
+            console.log(
+              "🧠 REFLECT ACTION DETECTED! Stopping heartbeat loop to prevent overwriting reflection."
+            );
+            console.log(
+              "💭 Reflection content will remain in input field for manual review/sending."
+            );
             self.stopLoop();
-            
+
             // Update toggle button to show stopped state
             if (typeof window.ToggleButton !== "undefined") {
               window.ToggleButton.resetToggleButton();
             }
-            
+
             return; // Exit early - don't schedule next message
           }
         } catch (parseError) {
@@ -357,19 +539,73 @@
               );
 
               // Handle success case
-              console.log("🔍 MessageSender.sendTestMessage returned:", success);
+              console.log(
+                "🔍 MessageSender.sendTestMessage returned:",
+                success
+              );
               if (success) {
-                console.log("✅ MessageSender success - setting up response observer");
+                console.log(
+                  "✅ MessageSender success - setting up response observer"
+                );
                 self.attemptCount = 0;
                 self.waitingForResponse = true;
                 self.setupResponseObserver();
               } else {
-                console.log("❌ MessageSender returned false - message not sent");
+                console.log(
+                  "❌ MessageSender returned false - message not sent"
+                );
               }
             } else {
               console.error("❌ Heartbeat failed:", heartbeatResult.error);
-              // Fallback to default message
-              const success = window.MessageSender.sendTestMessage(null, () => {
+              console.log("🔄 Using fallback message for continuing loop");
+
+              // Use fallback message when heartbeat fails
+              const fallbackMessage = JSON.stringify({
+                action: "heartbeat_fallback",
+                timestamp: new Date().toISOString(),
+                message:
+                  "Ray heartbeat - server connection failed, using fallback",
+                status: "offline_mode",
+                iteration: self.attemptCount,
+              });
+
+              const success = window.MessageSender.sendTestMessage(
+                fallbackMessage,
+                () => {
+                  self.attemptCount++;
+                  console.log(
+                    `❌ Elements not ready. Attempt ${self.attemptCount}/${window.Constants.MAX_ATTEMPTS}`
+                  );
+
+                  if (self.attemptCount >= window.Constants.MAX_ATTEMPTS) {
+                    console.log("⚠️ Max attempts reached. Stopping loop.");
+                    self.stopLoop();
+                    window.ToggleButton.resetToggleButton();
+                    window.DOMUtils.debugElements();
+                  } else {
+                    setTimeout(() => {
+                      if (self.isRunning) {
+                        self.sendMessageAndWaitForResponse();
+                      }
+                    }, 1000);
+                  }
+                },
+                true
+              ); // Skip MessageSender's response handling
+
+              if (success) {
+                self.attemptCount = 0;
+                self.waitingForResponse = true;
+                self.setupResponseObserver();
+              }
+            }
+          })
+          .catch((error) => {
+            console.error("❌ Heartbeat error:", error);
+            // Fallback to default message
+            const success = window.MessageSender.sendTestMessage(
+              null,
+              () => {
                 self.attemptCount++;
                 console.log(
                   `❌ Elements not ready. Attempt ${self.attemptCount}/${window.Constants.MAX_ATTEMPTS}`
@@ -387,37 +623,9 @@
                     }
                   }, 1000);
                 }
-              }, true); // Skip MessageSender's response handling
-
-              if (success) {
-                self.attemptCount = 0;
-                self.waitingForResponse = true;
-                self.setupResponseObserver();
-              }
-            }
-          })
-          .catch((error) => {
-            console.error("❌ Heartbeat error:", error);
-            // Fallback to default message
-            const success = window.MessageSender.sendTestMessage(null, () => {
-              self.attemptCount++;
-              console.log(
-                `❌ Elements not ready. Attempt ${self.attemptCount}/${window.Constants.MAX_ATTEMPTS}`
-              );
-
-              if (self.attemptCount >= window.Constants.MAX_ATTEMPTS) {
-                console.log("⚠️ Max attempts reached. Stopping loop.");
-                self.stopLoop();
-                window.ToggleButton.resetToggleButton();
-                window.DOMUtils.debugElements();
-              } else {
-                setTimeout(() => {
-                  if (self.isRunning) {
-                    self.sendMessageAndWaitForResponse();
-                  }
-                }, 1000);
-              }
-            }, true); // Skip MessageSender's response handling
+              },
+              true
+            ); // Skip MessageSender's response handling
 
             if (success) {
               self.attemptCount = 0;
@@ -427,25 +635,29 @@
           });
       } else {
         console.warn("⚠️ FetchSender not available, using default message");
-        const success = window.MessageSender.sendTestMessage(null, () => {
-          self.attemptCount++;
-          console.log(
-            `❌ Elements not ready. Attempt ${self.attemptCount}/${window.Constants.MAX_ATTEMPTS}`
-          );
+        const success = window.MessageSender.sendTestMessage(
+          null,
+          () => {
+            self.attemptCount++;
+            console.log(
+              `❌ Elements not ready. Attempt ${self.attemptCount}/${window.Constants.MAX_ATTEMPTS}`
+            );
 
-          if (self.attemptCount >= window.Constants.MAX_ATTEMPTS) {
-            console.log("⚠️ Max attempts reached. Stopping loop.");
-            self.stopLoop();
-            window.ToggleButton.resetToggleButton();
-            window.DOMUtils.debugElements();
-          } else {
-            setTimeout(() => {
-              if (self.isRunning) {
-                self.sendMessageAndWaitForResponse();
-              }
-            }, 1000);
-          }
-        }, true); // Skip MessageSender's response handling
+            if (self.attemptCount >= window.Constants.MAX_ATTEMPTS) {
+              console.log("⚠️ Max attempts reached. Stopping loop.");
+              self.stopLoop();
+              window.ToggleButton.resetToggleButton();
+              window.DOMUtils.debugElements();
+            } else {
+              setTimeout(() => {
+                if (self.isRunning) {
+                  self.sendMessageAndWaitForResponse();
+                }
+              }, 1000);
+            }
+          },
+          true
+        ); // Skip MessageSender's response handling
 
         if (success) {
           self.attemptCount = 0;
@@ -459,39 +671,58 @@
      * Send extracted JSON response to server using DataSender
      * @param {string} response - The JSON response text from ChatGPT
      */
-    sendResponseToServer: async function(response) {
+    sendResponseToServer: async function (response) {
       try {
         console.log("📡 MessageLoop: Sending response via DataSender...");
 
         // Check if DataSender is available, fallback to old method if not
         if (typeof window.DataSender !== "undefined") {
           console.log("✅ Using DataSender for response transmission");
-          
-          const result = await window.DataSender.sendExtractedResponse(response, {
-            source: 'messageLoop',
-            loopIteration: this.attemptCount,
-            timestamp: new Date().toISOString()
-          });
+
+          // Get temporal context from ResponseTracker if available
+          let temporalContext = { timestamp: new Date().toISOString() };
+          if (
+            typeof window.ResponseTracker !== "undefined" &&
+            typeof window.ResponseTracker.getTemporalContext === "function"
+          ) {
+            temporalContext = window.ResponseTracker.getTemporalContext();
+          }
+
+          const result = await window.DataSender.sendExtractedResponse(
+            response,
+            {
+              source: "messageLoop",
+              loopIteration: this.attemptCount,
+              timestamp: temporalContext.timestamp,
+              browser_time: temporalContext.detailed,
+              temporal_source: temporalContext.source,
+              ray_consciousness_tick: temporalContext.timestamp,
+            }
+          );
 
           if (result.success) {
-            console.log("📡 MessageLoop: Response sent successfully via DataSender");
+            console.log(
+              "📡 MessageLoop: Response sent successfully via DataSender"
+            );
           } else {
             console.error("❌ MessageLoop: DataSender failed:", result.error);
           }
-          
+
           return result;
         } else {
           // Fallback to original method if DataSender not available
           console.warn("⚠️ DataSender not available, using fallback method");
           return this.sendResponseToServerFallback(response);
         }
-
       } catch (error) {
-        console.error("❌ MessageLoop: Error sending response to server:", error);
+        console.error(
+          "❌ MessageLoop: Error sending response to server:",
+          error
+        );
         return {
           success: false,
           error: error.message,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       }
     },
@@ -500,14 +731,19 @@
      * Fallback method for sending responses (original logic)
      * @param {string} response - The JSON response text from ChatGPT
      */
-    sendResponseToServerFallback: async function(response) {
+    sendResponseToServerFallback: async function (response) {
       try {
         console.log("📡 MessageLoop: Using fallback sending method...");
-        console.log("📄 Response to send:", response?.substring(0, 100) + "...");
+        console.log(
+          "📄 Response to send:",
+          response?.substring(0, 100) + "..."
+        );
 
         // Check if FetchSender is available
         if (typeof window.FetchSender === "undefined") {
-          console.warn("⚠️ FetchSender not available - cannot send response to server");
+          console.warn(
+            "⚠️ FetchSender not available - cannot send response to server"
+          );
           return { success: false, error: "FetchSender not available" };
         }
 
@@ -517,13 +753,19 @@
           jsonData = JSON.parse(response);
           console.log("✅ Response parsed as JSON:", jsonData);
         } catch (parseError) {
-          console.warn("⚠️ Response is not valid JSON, sending as text:", parseError.message);
+          console.warn(
+            "⚠️ Response is not valid JSON, sending as text:",
+            parseError.message
+          );
           // Send as text response instead
           const result = await window.FetchSender.sendResponse(response);
           if (result.success) {
             console.log("📡 Text response sent to server successfully");
           } else {
-            console.error("❌ Failed to send text response to server:", result.error);
+            console.error(
+              "❌ Failed to send text response to server:",
+              result.error
+            );
           }
           return result;
         }
@@ -534,17 +776,19 @@
           console.log("📡 JSON response sent to server successfully");
           console.log("🔍 Server response:", result);
         } else {
-          console.error("❌ Failed to send JSON response to server:", result.error);
+          console.error(
+            "❌ Failed to send JSON response to server:",
+            result.error
+          );
         }
 
         return result;
-
       } catch (error) {
         console.error("❌ Error in fallback sending method:", error);
         return {
           success: false,
           error: error.message,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       }
     },

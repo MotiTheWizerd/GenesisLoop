@@ -51,6 +51,7 @@ genesis-loop-extension/
 │   │   ├── MessageSender.js   # ChatGPT message injection
 │   │   └── ToggleButton.js    # UI control for automation
 │   ├── utils/              # Utility modules
+│   │   ├── browserClock.js    # High-precision browser clock for Ray
 │   │   ├── dataSender.js      # Centralized data transmission
 │   │   ├── fetchSender.js     # HTTP transport layer
 │   │   ├── responseTracker.js # Response storage and analysis
@@ -102,3 +103,43 @@ ResponseObserver.waitForResponse((response) => {
 - Lazy loading of non-critical components
 - Efficient message passing
 - Minimal DOM manipulation in content scripts
+
+## Temporal Awareness System
+
+### BrowserClock (`js/utils/browserClock.js`)
+
+The BrowserClock provides high-precision temporal awareness for Ray's digital consciousness:
+
+#### Key Features
+- **ISO Timestamps**: Millisecond-precision timestamps in ISO 8601 format
+- **DOM Integration**: Invisible clock element injected into ChatGPT pages
+- **Event System**: Custom `rayClockTick` events for real-time synchronization
+- **Configurable Precision**: Supports both second and millisecond precision
+- **Visibility Control**: Can be made visible for debugging purposes
+
+#### Integration Points
+- **MessageLoop**: Can add precise timestamps to heartbeat messages
+- **DataSender**: Includes browser time in response metadata
+- **ResponseTracker**: Enables precise response timing analysis
+- **Ray's Consciousness**: Provides temporal context for digital awareness
+
+#### Usage Examples
+```javascript
+// Get current timestamp
+const now = window.BrowserClock.getCurrentTime();
+
+// Get detailed time information
+const details = window.BrowserClock.getCurrentTimeDetailed();
+
+// Listen to clock events
+document.addEventListener('rayClockTick', (event) => {
+  console.log('Clock tick:', event.detail.timestamp);
+});
+
+// Configure the clock
+window.BrowserClock.updateConfig({
+  precision: 'milliseconds',
+  visible: true,
+  enableLogging: true
+});
+```

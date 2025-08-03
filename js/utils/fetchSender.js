@@ -20,7 +20,11 @@
         memory_status: "memory/status",
         directory_search: "directory/search",
         list_directory: "directory/search",
+        read_file: "directory/read",
         search: "web/search",
+        web_search: "web/search", // Added support for web_search action name
+        scrape: "web/scrape", // Added support for web scraping action
+        web_scrape: "web/scrape", // Alternative naming for web scraping
         // Future actions can be added here
         // "analyze": "analyze",
         // "generate": "generate"
@@ -196,7 +200,27 @@
     async sendJSONWithTaskRouting(jsonData, options = {}) {
       const config = { ...this.config, ...options };
 
-      // Build the tasks endpoint URL
+      // Check if task contains a single action that has a specific route
+      if (Array.isArray(jsonData.task) && jsonData.task.length === 1) {
+        const taskItem = jsonData.task[0];
+        if (taskItem.action && config.actionRoutes[taskItem.action]) {
+          console.log(`🎯 FetchSender: Task contains single action '${taskItem.action}' - routing to specific endpoint`);
+          
+          // Extract the action data and route it directly
+          const actionData = {
+            ...taskItem,
+            // Preserve any root-level metadata
+            assigned_by: jsonData.assigned_by,
+            execute_immediately: jsonData.execute_immediately,
+            self_destruct: jsonData.self_destruct,
+            timestamp: jsonData.timestamp || new Date().toISOString()
+          };
+          
+          return this.sendJSONWithAction(actionData, options);
+        }
+      }
+
+      // Default behavior: send to /tasks endpoint
       const tasksUrl = config.baseUrl.endsWith("/")
         ? config.baseUrl + "tasks"
         : config.baseUrl + "/tasks";
