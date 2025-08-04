@@ -38,7 +38,6 @@ JSON Response → Action Detection → Route Selection → Server Endpoint
 {"action":      "directory_search"  → /directory/search
  "list_         "list_directory"   → /directory/search
  directory"}    "reflect"          → /tasks/reflect
-                "memory_status"    → /memory/status
                 default            → /
 ```
 

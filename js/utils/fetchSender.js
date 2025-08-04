@@ -16,8 +16,6 @@
       // Action-based routing configuration
       actionRoutes: {
         reflect: "tasks/reflect",
-        remember_past_reflections: "memory/get_reflections_logs",
-        memory_status: "memory/status",
         directory_search: "directory/search",
         list_directory: "directory/search",
         read_file: "directory/read",

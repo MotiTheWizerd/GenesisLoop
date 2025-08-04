@@ -72,6 +72,11 @@
           button.textContent = window.Constants.BUTTON_STYLES.active.text;
           button.style.backgroundColor = window.Constants.BUTTON_STYLES.active.backgroundColor;
           
+          // Update status display
+          if (typeof window.RayLoopStatus !== "undefined") {
+            window.RayLoopStatus.setStatus('Button Clicked - Starting');
+          }
+          
           // Start the loop
           window.MessageLoop.startLoop();
           
@@ -79,6 +84,12 @@
           window.MessageLoop.waitForFirstResponse();
         } else {
           console.log("❌ Elements not found - cannot start loop");
+          
+          // Update status display
+          if (typeof window.RayLoopStatus !== "undefined") {
+            window.RayLoopStatus.setStatus('Elements Not Found');
+            window.RayLoopStatus.incrementErrors();
+          }
         }
       }
     };

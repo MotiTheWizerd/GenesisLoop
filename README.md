@@ -98,8 +98,6 @@ ChatGPT Response → ResponseObserver → DataSender → FetchSender → Server
   - `"action": "reflect"` → `/tasks/reflect`
   - `"action": "directory_search"` → `/directory/search`
   - `"action": "list_directory"` → `/directory/search` (NEW)
-  - `"action": "memory_status"` → `/memory/status`
-  - `"action": "remember_past_reflections"` → `/memory/get_reflections_logs`
   - Default → `/` (base endpoint)
 
 ### DOM Utilities Modular Design

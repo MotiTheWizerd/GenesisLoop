@@ -56,6 +56,7 @@
         "js/addons/power-control/rayPowerControl.js",
         "js/addons/control-panel/rayControlPanel.js",
         "js/addons/activity-monitor/rayActivityMonitor.js",
+        "js/addons/interaction-logger/interactionLogger.js",
         "js/addons/trust-metrics/rayTrustCore.js",
         "js/addons/trust-metrics/rayTrustUI.js",
         "js/addons/trust-metrics/rayTrustIntegration.js",
@@ -71,6 +72,8 @@
         "js/utils/dependencyLoader.js",
         "js/components/MessageSender.js",
         "js/components/ToggleButton.js",
+        "js/addons/loop-status/saveIndicator.js",
+        "js/addons/loop-status/rayLoopStatus.js",
         "js/components/MessageLoop.js",
         "js/addons/dom-control/emergency/emergencyDOMAPI.js",
         "js/addons/dom-control/health/domHealthChecker.js",
@@ -87,6 +90,8 @@
         "js/addons/voice-synthesis/voiceSynthesisUI.js",
         "js/addons/voice-synthesis/voiceSettings.js",
         "js/addons/voice-synthesis/index.js",
+        "js/addons/message-cleanup/messageCleanup.js",
+        "js/addons/message-cleanup/index.js",
         "content.js"
       ],
       "run_at": "document_end"

@@ -192,10 +192,7 @@ console.log("  2. 🥈 'action' field:");
 console.log("     - 'reflect'              → /tasks/reflect");
 console.log("     - 'directory_search'     → /directory/search");
 console.log("     - 'list_directory'       → /directory/search (NEW)");
-console.log("     - 'memory_status'        → /memory/status");
-console.log(
-  "     - 'remember_past_reflections' → /memory/get_reflections_logs"
-);
+
 console.log("  3. 🥉 Neither field          → default endpoint");
 
 console.log("\n💡 Examples of JSON that will route to /directory/search:");

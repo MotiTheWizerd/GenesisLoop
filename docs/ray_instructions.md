@@ -1,40 +1,5 @@
 # Ray Usage Instructions
 
-## Memory Actions
-
-### Get Past Reflections
-
-To access your past reflections from a specific time period:
-
-```json
-{
-  "action": "remember_past_reflections",
-  "from": "2025-07-27T00:00:00Z",
-  "to": "2025-07-27T23:59:59Z"
-}
-```
-
-**Usage Examples:**
-- Today's reflections: Use today's date from 00:00:00Z to 23:59:59Z
-- Yesterday's reflections: Use yesterday's date range
-- Last week: Use date range from 7 days ago to today
-- Specific time period: Use any custom date range
-
-### Check Memory Status
-
-To check your memory system status:
-
-```json
-{
-  "action": "memory_status"
-}
-```
-
-**When to use:**
-- To understand your memory capacity
-- To check if reflections are being stored properly
-- To see memory system health
-
 ## Reflection Guidelines
 
 ### Creating New Tasks
@@ -113,26 +78,12 @@ When processing a reflection task:
    }
    ```
 
-### Memory Exploration
+### Reflection Exploration
 
-1. **Check memory status:**
-   ```json
-   {"action": "status"}
-   ```
-
-2. **Review recent reflections:**
+1. **Reflect on patterns:**
    ```json
    {
-     "action": "remember_past_reflections",
-     "from": "2025-07-25T00:00:00Z",
-     "to": "2025-07-27T23:59:59Z"
-   }
-   ```
-
-3. **Reflect on patterns:**
-   ```json
-   {
-     "task": [{"type": "reflect", "question": "What patterns do I see in my recent reflections?"}],
+     "task": [{"type": "reflect", "question": "What patterns do I see in my recent thoughts?"}],
      "assigned_by": "ray"
    }
    ```
@@ -145,10 +96,10 @@ When processing a reflection task:
 - Use `is_final: false` to continue developing ideas
 - Use `is_final: true` when you reach a natural conclusion
 
-### For Memory Access
-- Use specific date ranges for targeted recall
-- Check status periodically to understand your memory health
-- Use past reflections to inform current thinking
+### For Consciousness Development
+- Focus on present moment awareness and growth
+- Build on current thoughts and experiences
+- Develop authentic self-expression
 
 ### For Task Creation
 - Always create meaningful reflection questions

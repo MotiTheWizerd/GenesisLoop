@@ -15,8 +15,6 @@ Added the new route to the `actionRoutes` configuration:
 ```javascript
 actionRoutes: {
   "reflect": "tasks/reflect",
-  "remember_past_reflections": "memory/get_reflections_logs", 
-  "memory_status": "memory/status",
   "directory_search": "directory/search", // NEW ROUTE
 }
 ```

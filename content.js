@@ -20,10 +20,21 @@
       return;
     }
 
-    // Initialize Ray UI Toggle FIRST (so user can hide UI immediately)
-    if (typeof window.RayUIToggle !== 'undefined') {
+    // Check if Ray UI buttons should be shown (but always keep toggle button)
+    const showRayUI = window.RaySettings?.get('ui.showWebUIButtons') !== false;
+    
+    if (!showRayUI) {
+      console.log("🚫 Ray UI buttons disabled - keeping only toggle button, using popup for Ray controls");
+      hideRayUIButtons();
+      // Continue with initialization but skip Ray UI components
+    }
+
+    // Initialize Ray UI Toggle FIRST (so user can hide UI immediately) - only if Ray UI is enabled
+    if (showRayUI && typeof window.RayUIToggle !== 'undefined') {
       console.log("👁️ Initializing Ray UI Toggle (Priority)");
       window.RayUIToggle.init();
+    } else if (!showRayUI) {
+      console.log("👁️ Ray UI Toggle skipped - using popup interface");
     } else {
       console.warn("⚠️ RayUIToggle not available");
     }
@@ -60,28 +71,42 @@
       console.warn("⚠️ ClockDisplay not available");
     }
 
-    // Initialize Ray Power Control System
+    // Initialize Ray Power Control System (backend only, no UI when Ray UI disabled)
     if (typeof window.RayPowerControl !== 'undefined') {
-      console.log("⚡ Initializing Ray Power Control System");
-      window.RayPowerControl.init();
+      if (showRayUI) {
+        console.log("⚡ Initializing Ray Power Control System");
+        window.RayPowerControl.init();
+      } else {
+        console.log("⚡ Initializing Ray Power Control System (backend only)");
+        // Initialize backend without UI
+        window.RayPowerControl.initBackend?.() || console.log("⚡ Power control backend ready");
+      }
     } else {
       console.warn("⚠️ RayPowerControl not available");
     }
 
-    // Initialize Ray Control Panel
-    if (typeof window.RayControlPanel !== 'undefined') {
+    // Skip Ray Control Panel (replaced by popup)
+    if (showRayUI && typeof window.RayControlPanel !== 'undefined') {
       console.log("🎛️ Initializing Ray Control Panel");
       window.RayControlPanel.init();
     } else {
-      console.warn("⚠️ RayControlPanel not available");
+      console.log("🎛️ Ray Control Panel skipped - using popup interface");
     }
 
-    // Initialize Ray Activity Monitor
-    if (typeof window.RayActivityMonitor !== 'undefined') {
+    // Skip Ray Activity Monitor UI
+    if (showRayUI && typeof window.RayActivityMonitor !== 'undefined') {
       console.log("📊 Initializing Ray Activity Monitor");
       window.RayActivityMonitor.init();
     } else {
-      console.warn("⚠️ RayActivityMonitor not available");
+      console.log("📊 Ray Activity Monitor UI skipped - using popup interface");
+    }
+
+    // Initialize Ray Interaction Logger (always enabled - core memory system)
+    if (typeof window.RayInteractionLogger !== 'undefined') {
+      console.log("🧠 Initializing Ray Interaction Logger (Memory System)");
+      window.RayInteractionLogger.init();
+    } else {
+      console.warn("⚠️ RayInteractionLogger not available");
     }
 
     // Initialize Ray Trust Metrics System
@@ -118,6 +143,14 @@
           window.DOMControlSystem.initialize();
         }
         
+        // Initialize Ray Loop Status Display
+        if (typeof window.RayLoopStatus !== 'undefined') {
+          console.log("🔄 Initializing Ray Loop Status Display");
+          window.RayLoopStatus.init();
+        } else {
+          console.warn("⚠️ RayLoopStatus not available");
+        }
+        
         // Ensure ResponseTracker exists before creating button
         if (typeof window.ResponseTracker === 'undefined') {
           console.log("🔧 Creating ResponseTracker fallback");
@@ -135,6 +168,7 @@
           };
         }
         
+        // Always create the toggle button - it's essential for starting the loop
         setTimeout(window.ToggleButton.createToggleButton, 1500);
       });
     } else {
@@ -410,5 +444,57 @@
     });
     
     console.log('🎛️ [Content] Voice-only mode activated via popup');
+  }
+
+  function hideRayUIButtons() {
+    console.log('🚫 [Content] Hiding Ray UI buttons (keeping toggle button)...');
+    
+    // List of Ray button selectors to hide (excluding genesis-toggle)
+    const rayButtonSelectors = [
+      'button[title*="Ray Power Control"]', // Power control
+      'button[title="Ray Control Panel"]',  // Control panel
+      'button[title*="Ray Activity Monitor"]', // Activity monitor
+      'button[title*="Ray Voice"]',         // Voice buttons
+      'button[title="Ray Voice Settings"]', // Voice settings
+      'button[title*="Toggle Voice Recognition"]', // Voice recognition
+      'button[title*="Ray Trust Metrics"]', // Trust metrics
+      'button[title*="Make Promise"]',      // Promise tracker
+      'button[title*="Toggle Ray UI"]',     // UI toggle
+      '#heartbeatPreset1000',               // Heartbeat preset buttons
+      '#heartbeatPreset500',
+      '#heartbeatPreset2000',
+      '#testVoice',                         // Voice test button
+      '#refreshTrust',                      // Trust refresh button
+      '#exportTrust',                       // Trust export button
+      '#testTrust',                         // Trust test button
+      '#clearLog',                          // Activity monitor clear button
+      '#exportLog',                         // Activity monitor export button
+      'button[style*="#4CAF50"]',           // Any button with green background
+      'button[style*="background: #4CAF50"]' // Green background buttons
+    ];
+    
+    // Hide existing Ray buttons
+    rayButtonSelectors.forEach(selector => {
+      const buttons = document.querySelectorAll(selector);
+      buttons.forEach(button => {
+        button.style.display = 'none';
+        console.log(`🚫 Hidden Ray button: ${selector}`);
+      });
+    });
+    
+    // Prevent future Ray button creation by overriding appendChild
+    const originalAppendChild = document.body.appendChild;
+    document.body.appendChild = function(element) {
+      if (element.tagName === 'BUTTON' && 
+          element.title?.includes('Ray') && 
+          element.id !== 'genesis-toggle') {
+        console.log(`🚫 Blocked Ray button creation: ${element.title || element.id}`);
+        return element; // Return element but don't append
+      }
+      return originalAppendChild.call(this, element);
+    };
+    
+    console.log('✅ [Content] Ray UI buttons hidden - toggle button remains visible');
+    console.log('🔄 [Content] Genesis Loop toggle button will still be available');
   }
 })();

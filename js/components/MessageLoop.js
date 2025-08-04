@@ -10,6 +10,9 @@
     attemptCount: 0,
     responseObserver: null,
     waitingForResponse: false,
+    nextRunTime: null,
+    responseCount: 0,
+    errorCount: 0,
 
     /**
      * Stop the message sending loop
@@ -24,6 +27,14 @@
       this.isRunning = false;
       this.waitingForResponse = false;
       this.attemptCount = 0;
+      this.nextRunTime = null;
+      
+      // Update status display
+      if (typeof window.RayLoopStatus !== "undefined") {
+        window.RayLoopStatus.setRunning(false);
+        window.RayLoopStatus.setStatus('Stopped');
+      }
+      
       console.log("⏹️ Response-driven loop stopped.");
     },
 
@@ -47,11 +58,23 @@
       this.isRunning = true;
       this.attemptCount = 0;
       this.waitingForResponse = false;
+      this.responseCount = 0;
+      this.errorCount = 0;
 
       // Disconnect any existing observer
       if (this.responseObserver) {
         this.responseObserver.disconnect();
         this.responseObserver = null;
+      }
+
+      // Update status display
+      if (typeof window.RayLoopStatus !== "undefined") {
+        window.RayLoopStatus.setRunning(true);
+        window.RayLoopStatus.setStatus('Starting');
+        window.RayLoopStatus.updateState({
+          responseCount: this.responseCount,
+          errors: this.errorCount
+        });
       }
 
       console.log("⏳ Starting response-driven loop (NO TIMERS/INTERVALS)...");
@@ -156,6 +179,17 @@
 
                     self.waitingForResponse = false;
                     self.responseObserver = null;
+                    self.responseCount++;
+
+                    // Update status display with immediate save
+                    if (typeof window.RayLoopStatus !== "undefined") {
+                      window.RayLoopStatus.incrementResponses();
+                      window.RayLoopStatus.setStatus('Processing Response');
+                      window.RayLoopStatus.updateState({
+                        lastRun: Date.now(),
+                        responseCount: self.responseCount
+                      });
+                    }
 
                     // Store the response with temporal context
                     if (typeof window.ResponseTracker !== "undefined") {
@@ -173,24 +207,23 @@
                     // Send JSON response to server
                     self.sendResponseToServer(response);
 
-                    // Check if this is a reflect action response - if so, stop the heartbeat
+                    // Check if this is a reflect action response - continue loop but note it
                     try {
                       const jsonData = JSON.parse(response);
                       if (jsonData && jsonData.action === "reflect") {
                         console.log(
-                          "🧠 REFLECT ACTION DETECTED ON FIRST RESPONSE! Stopping heartbeat loop."
+                          "🧠 REFLECT ACTION DETECTED ON FIRST RESPONSE! Continuing heartbeat loop."
                         );
                         console.log(
-                          "💭 Reflection content will remain in input field for manual review/sending."
+                          "💭 Reflection content processed - loop continues running."
                         );
-                        self.stopLoop();
-
-                        // Update toggle button to show stopped state
-                        if (typeof window.ToggleButton !== "undefined") {
-                          window.ToggleButton.resetToggleButton();
+                        
+                        // Update status display to show reflect action
+                        if (typeof window.RayLoopStatus !== "undefined") {
+                          window.RayLoopStatus.setStatus('Reflect Action Processed');
                         }
-
-                        return; // Exit early - don't schedule next message
+                        
+                        // Continue with normal loop flow - don't stop
                       }
                     } catch (parseError) {
                       console.log(
@@ -201,6 +234,14 @@
                     // Continue the loop
                     if (self.isRunning) {
                       console.log("🔄 Scheduling next message...");
+                      self.nextRunTime = Date.now() + 1000;
+                      
+                      // Update status display
+                      if (typeof window.RayLoopStatus !== "undefined") {
+                        window.RayLoopStatus.setNextRun(self.nextRunTime);
+                        window.RayLoopStatus.setStatus('Waiting');
+                      }
+                      
                       setTimeout(() => {
                         self.sendMessageAndWaitForResponse();
                       }, 1000);
@@ -210,6 +251,18 @@
               } else {
                 console.log("❌ First message send failed");
                 self.waitingForResponse = false;
+                self.errorCount++;
+                
+                // Update status display with immediate save
+                if (typeof window.RayLoopStatus !== "undefined") {
+                  window.RayLoopStatus.incrementErrors();
+                  window.RayLoopStatus.setStatus('Send Failed');
+                  window.RayLoopStatus.updateState({
+                    errors: self.errorCount,
+                    lastRun: Date.now()
+                  });
+                }
+                
                 self.stopLoop();
               }
             } else {
