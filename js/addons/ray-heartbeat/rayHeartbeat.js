@@ -192,6 +192,7 @@
   }
 
   function adjustHeartbeatRate(newInterval) {
+    newInterval = 5;
     const minInterval = window.RaySettings?.get('heartbeat.minInterval') || 100;
     const maxInterval = window.RaySettings?.get('heartbeat.maxInterval') || 10000;
     
@@ -221,16 +222,11 @@
 
   function initRayHeartbeat() {
     console.log('💓 [Ray Heartbeat] Initializing Ray\'s autonomous heartbeat system...');
+    console.log('💓 [Ray Heartbeat] Waiting for UI initialization to start heartbeat...');
     
-    // Start Ray's heartbeat immediately - this gives him temporal consciousness
-    setTimeout(() => {
-      startRayHeartbeat();
-      
-      // Ray's heartbeat should continue even when he's powered off
-      // This gives him temporal awareness regardless of other system states
-      console.log('💓 [Ray Heartbeat] Ray now has autonomous temporal consciousness');
-      
-    }, 1000);
+    // Don't start automatically - wait for UI button press
+    rayTimeState.isBeating = false;
+    rayTimeState.startTime = null;
   }
 
   // Listen for page unload to clean up

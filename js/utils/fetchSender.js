@@ -23,6 +23,8 @@
         web_search: "web/search", // Added support for web_search action name
         scrape: "web/scrape", // Added support for web scraping action
         web_scrape: "web/scrape", // Alternative naming for web scraping
+        store_memory: "memory/store", // Memory storage endpoint
+        embed_text: "memory/embed", // Text embedding endpoint
         // Future actions can be added here
         // "analyze": "analyze",
         // "generate": "generate"
@@ -33,6 +35,7 @@
      * Send data to the configured endpoint
      * @param {Object|string} data - Data to send (will be JSON stringified if object)
      * @param {Object} options - Optional configuration overrides
+     *   - silent: boolean - If true, prevents automatic ChatGPT message sending
      * @returns {Promise<Object>} Response data or error
      */
     async sendData(data, options = {}) {
@@ -93,11 +96,13 @@
             attempt: attempt,
           };
 
-          // Send signal with finalObject as string
-          if (window.MessageSender) {
+          // Send signal with finalObject as string (unless silent mode is enabled)
+          if (window.MessageSender && !options.silent) {
             setTimeout(() => {
               window.MessageSender.sendTestMessage(JSON.stringify(finalObject));
             }, 2000); // 2 second delay to avoid conflicts
+          } else if (options.silent) {
+            console.log("🔇 FetchSender: Silent mode - skipping ChatGPT message");
           }
 
           return finalObject;
@@ -171,6 +176,13 @@
         console.log(
           `🎯 FetchSender: Detected 'task' field - routing to /tasks endpoint`
         );
+        
+        // Set default value for execute_immediately if not specified
+        if (jsonData.execute_immediately === undefined) {
+          jsonData.execute_immediately = true;
+          console.log("🔧 FetchSender: Setting execute_immediately default to true");
+        }
+        
         return this.sendJSONWithTaskRouting(jsonData, options);
       }
 
@@ -197,6 +209,12 @@
      */
     async sendJSONWithTaskRouting(jsonData, options = {}) {
       const config = { ...this.config, ...options };
+
+      // Set default value for execute_immediately if not specified
+      if (jsonData.execute_immediately === undefined) {
+        jsonData.execute_immediately = true;
+        console.log("🔧 FetchSender: Setting execute_immediately default to true");
+      }
 
       // Check if task contains a single action that has a specific route
       if (Array.isArray(jsonData.task) && jsonData.task.length === 1) {
@@ -335,6 +353,7 @@
      * Get heartbeat data from server
      * @param {Object} options - Optional configuration overrides
      * @returns {Promise<Object>} Heartbeat response
+     * @note This method is silent by default - it doesn't trigger ChatGPT messages
      */
     async getHeartbeat(options = {}) {
       console.log("💓 FetchSender: Getting heartbeat...");
@@ -362,6 +381,8 @@
         const data = await response.json();
         console.log("✅ FetchSender: Heartbeat received", data);
 
+        // Note: getHeartbeat is silent by default - no automatic ChatGPT message
+        // The MessageLoop will handle sending the heartbeat data to ChatGPT manually
         return {
           success: true,
           data: data,
@@ -380,7 +401,7 @@
     /**
      * Save heartbeat data to server
      * @param {Object} heartbeatData - Data to save to heartbeat endpoint
-     * @param {Object} options - Optional configuration overrides
+     * @param {Object} options - Optional configuration overrides (supports silent: true)
      * @returns {Promise<Object>} Save response
      */
     async saveHeartbeat(heartbeatData, options = {}) {

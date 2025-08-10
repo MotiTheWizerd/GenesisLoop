@@ -20,6 +20,11 @@
     persistenceKey: 'rayTrustData'
   };
 
+  // Utility functions
+  function getCurrentUnixTime() {
+    return Math.floor(Date.now() / 1000);
+  }
+
   // Trust Action Categories and Weights
   const trustActions = {
     // Positive trust actions
@@ -350,10 +355,6 @@
       console.warn('⚠️ Failed to load trust data:', error);
       trustData.currentLevel = 50; // Reset to neutral
     }
-  }
-
-  function getCurrentUnixTime() {
-    return Math.floor(Date.now() / 1000);
   }
 
   function resetTrustData() {

@@ -239,33 +239,37 @@
           break;
 
         case "setHeartbeatInterval":
-          if (window.RayHeartbeat) {
-            const success = window.RayHeartbeat.adjustRate(request.interval);
+          if (window.MessageLoop) {
+            const success = window.MessageLoop.setInterval(request.interval);
+            
+            // Sync RayLoopStatus with new interval
+            if (success && window.RayLoopStatus) {
+              window.RayLoopStatus.syncInterval();
+            }
+            
             sendResponse({success: success});
           } else {
-            sendResponse({success: false, error: 'RayHeartbeat not available'});
+            sendResponse({success: false, error: 'MessageLoop not available'});
           }
           break;
 
         case "getHeartbeatSettings":
           if (window.RaySettings) {
             const settings = {
-              interval: window.RaySettings.get('heartbeat.interval'),
-              maxTemporalEvents: window.RaySettings.get('heartbeat.maxTemporalEvents'),
-              logEveryNTicks: window.RaySettings.get('heartbeat.logEveryNTicks')
+              interval: window.RaySettings.get('messageLoop.interval') || 30
             };
             sendResponse({settings: settings});
           } else {
-            sendResponse({settings: {interval: 1000}});
+            sendResponse({settings: {interval: 30}});
           }
           break;
 
         case "getHeartbeatStatus":
-          if (window.RayHeartbeat) {
-            const status = window.RayHeartbeat.status();
+          if (window.MessageLoop) {
+            const status = window.MessageLoop.getStatus();
             sendResponse({status: status});
           } else {
-            sendResponse({status: {beating: false, heartRate: 'Unknown'}});
+            sendResponse({status: {running: false, interval: 'Unknown'}});
           }
           break;
 

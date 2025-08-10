@@ -28,8 +28,11 @@
     if (essentialLoaded) {
       initializeRayDOMSystem();
     } else {
-      console.log('⏳ Waiting for essential Ray DOM components to load...');
-      console.log('  - RayDOMInterface:', typeof window.RayDOMInterface);
+      // Only log every 10 attempts (2 seconds) to reduce spam
+      if (waitAttempts % 10 === 0) {
+        console.log('⏳ Waiting for essential Ray DOM components to load...');
+        console.log('  - RayDOMInterface:', typeof window.RayDOMInterface);
+      }
       setTimeout(waitForComponents, 200);
     }
   }

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ray Control Center Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      padding: 8px 16px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ray Control Center Test</h1>
+  
+  <div class="test-section">
+    <h2>Heartbeat Slider Test</h2>
+    <div>
+      <label for="heartbeatSlider">Heartbeat Interval (ms): </label>
+      <input type="range" id="heartbeatSlider" min="100" max="5000" step="100" value="1000">
+      <span id="heartbeatValue">1000ms</span>
+    </div>
+    <div>
+      <button id="preset500">500ms</button>
+      <button id="preset1000">1000ms</button>
+      <button id="preset2000">2000ms</button>
+    </div>
+    <div id="heartbeatStatus" class="status">Heartbeat status will appear here</div>
+  </div>
+
+  <div class="test-section">
+    <h2>System Controls Test</h2>
+    <div>
+      <button id="enableAll">Enable All Systems</button>
+      <button id="disableAll">Disable All Systems</button>
+      <button id="voiceOnly">Voice Only Mode</button>
+    </div>
+    <div id="systemStatus" class="status">System status will appear here</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Toggle Switches Test</h2>
+    <div>
+      <label>
+        <input type="checkbox" id="masterToggle"> Master Power
+      </label>
+    </div>
+    <div>
+      <label>
+        <input type="checkbox" class="system-toggle" data-system="domControl"> DOM Control
+      </label>
+    </div>
+    <div>
+      <label>
+        <input type="checkbox" class="system-toggle" data-system="voiceRecognition"> Voice Recognition
+      </label>
+    </div>
+  </div>
+
+  <script>
+    // Mock the chrome.runtime.sendMessage function for testing
+    window.chrome = window.chrome || {};
+    window.chrome.runtime = window.chrome.runtime || {};
+    window.chrome.runtime.sendMessage = function(message, callback) {
+      console.log('Message sent:', message);
+      // Simulate response
+      if (callback) {
+        setTimeout(() => {
+          callback({ success: true });
+        }, 100);
+      }
+      return true;
+    };
+
+    // Heartbeat controls
+    const heartbeatSlider = document.getElementById('heartbeatSlider');
+    const heartbeatValue = document.getElementById('heartbeatValue');
+    const heartbeatStatus = document.getElementById('heartbeatStatus');
+
+    // System controls
+    const systemStatus = document.getElementById('systemStatus');
+    const masterToggle = document.getElementById('masterToggle');
+    const systemToggles = document.querySelectorAll('.system-toggle');
+
+    // Update display when slider moves
+    heartbeatSlider.addEventListener('input', (e) => {
+      const value = parseInt(e.target.value);
+      heartbeatValue.textContent = `${value}ms`;
+    });
+
+    // Apply changes when slider is released
+    heartbeatSlider.addEventListener('change', (e) => {
+      const value = parseInt(e.target.value);
+      setHeartbeatInterval(value);
+    });
+
+    // Heartbeat preset buttons
+    document.getElementById('preset500').addEventListener('click', () => setHeartbeatPreset(500));
+    document.getElementById('preset1000').addEventListener('click', () => setHeartbeatPreset(1000));
+    document.getElementById('preset2000').addEventListener('click', () => setHeartbeatPreset(2000));
+
+    // System control buttons
+    document.getElementById('enableAll').addEventListener('click', enableAllSystems);
+    document.getElementById('disableAll').addEventListener('click', disableAllSystems);
+    document.getElementById('voiceOnly').addEventListener('click', setVoiceOnlyMode);
+
+    // Toggle switches
+    masterToggle.addEventListener('change', (e) => handleMasterPowerToggle(e.target.checked));
+    systemToggles.forEach(toggle => {
+      if (toggle.id !== 'masterToggle') {
+        toggle.addEventListener('change', (e) => {
+          handleSystemToggle(e.target.dataset.system, e.target.checked);
+        });
+      }
+    });
+
+    // Functions that would normally communicate with the extension
+    function setHeartbeatInterval(intervalMs) {
+      chrome.runtime.sendMessage({
+        action: 'setHeartbeatInterval',
+        interval: intervalMs
+      }, (response) => {
+        if (response && response.success) {
+          heartbeatStatus.textContent = `✅ Heartbeat interval set to ${intervalMs}ms`;
+          heartbeatStatus.className = 'status success';
+        } else {
+          heartbeatStatus.textContent = `❌ Failed to set heartbeat interval`;
+          heartbeatStatus.className = 'status error';
+        }
+      });
+    }
+
+    function setHeartbeatPreset(intervalMs) {
+      heartbeatSlider.value = intervalMs;
+      heartbeatValue.textContent = `${intervalMs}ms`;
+      setHeartbeatInterval(intervalMs);
+    }
+
+    function enableAllSystems() {
+      systemStatus.textContent = '✅ All systems enabled';
+      systemStatus.className = 'status success';
+      // Update UI to show all systems enabled
+      masterToggle.checked = true;
+      systemToggles.forEach(toggle => {
+        toggle.checked = true;
+      });
+    }
+
+    function disableAllSystems() {
+      systemStatus.textContent = '⚠️ All systems disabled';
+      systemStatus.className = 'status';
+      // Update UI to show all systems disabled
+      masterToggle.checked = false;
+      systemToggles.forEach(toggle => {
+        toggle.checked = false;
+      });
+    }
+
+    function setVoiceOnlyMode() {
+      systemStatus.textContent = '🔊 Voice only mode activated';
+      systemStatus.className = 'status success';
+      // Update UI for voice only mode
+      masterToggle.checked = true;
+      systemToggles.forEach(toggle => {
+        const system = toggle.dataset.system;
+        toggle.checked = (system === 'voiceRecognition' || system === 'voiceSynthesis');
+      });
+    }
+
+    function handleMasterPowerToggle(enabled) {
+      console.log(`Master power ${enabled ? 'enabled' : 'disabled'}`);
+      // If master power is off, disable all other toggles
+      if (!enabled) {
+        systemToggles.forEach(toggle => {
+          if (toggle.id !== 'masterToggle') {
+            toggle.checked = false;
+            toggle.disabled = true;
+          }
+        });
+      } else {
+        systemToggles.forEach(toggle => {
+          toggle.disabled = false;
+        });
+      }
+    }
+
+    function handleSystemToggle(system, enabled) {
+      console.log(`${system} ${enabled ? 'enabled' : 'disabled'}`);
+    }
+  </script>
+</body>
+</html>

@@ -7,6 +7,7 @@ The Ray Settings system provides centralized configuration management for all Ra
 ## Architecture
 
 ### Core Files
+
 - `js/config/raySettings.js` - Main settings configuration and management
 - `js/addons/ray-heartbeat/rayHeartbeat.js` - Updated to use settings
 
@@ -15,56 +16,72 @@ The Ray Settings system provides centralized configuration management for all Ra
 ```javascript
 RAY_SETTINGS = {
   heartbeat: {
-    interval: 1000,           // Ray's heartbeat interval (ms)
-    maxTemporalEvents: 100,   // Maximum temporal events to store
-    minInterval: 100,         // Minimum allowed interval
-    maxInterval: 10000,       // Maximum allowed interval
-    autoStart: true,          // Auto-start heartbeat
-    logEveryNTicks: 10        // Log frequency
+    interval: 1000, // Ray's heartbeat interval (ms)
+    maxTemporalEvents: 100, // Maximum temporal events to store
+    minInterval: 100, // Minimum allowed interval
+    maxInterval: 10000, // Maximum allowed interval
+    autoStart: true, // Auto-start heartbeat
+    logEveryNTicks: 10, // Log frequency
   },
-  
-  clock: { /* clock settings */ },
-  activityMonitor: { /* activity settings */ },
-  trustMetrics: { /* trust settings */ },
-  voice: { /* voice settings */ },
-  ui: { /* UI settings */ },
-  debug: { /* debug settings */ }
-}
+
+  clock: {
+    /* clock settings */
+  },
+  activityMonitor: {
+    /* activity settings */
+  },
+  trustMetrics: {
+    /* trust settings */
+  },
+  voice: {
+    /* voice settings */
+  },
+  ui: {
+    /* UI settings */
+  },
+  debug: {
+    /* debug settings */
+  },
+};
 ```
 
 ## Usage
 
 ### Getting Settings
+
 ```javascript
 // Get a specific setting
-const interval = window.RaySettings.get('heartbeat.interval');
+const interval = window.RaySettings.get("heartbeat.interval");
 
 // Get a settings group
-const heartbeatSettings = window.RaySettings.get('heartbeat');
+const heartbeatSettings = window.RaySettings.get("heartbeat");
 
 // Get all settings
 const allSettings = window.RaySettings.getAll();
 ```
 
 ### Setting Values
+
 ```javascript
 // Set a specific value
-window.RaySettings.set('heartbeat.interval', 2000);
+window.RaySettings.set("heartbeat.interval", 2000);
 
 // This will trigger a 'raySettingsChanged' event
 ```
 
 ### Validation
+
 ```javascript
 // Validate a setting value
-const isValid = window.RaySettings.validate('heartbeat.interval', 1500);
+const isValid = window.RaySettings.validate("heartbeat.interval", 1500);
 ```
 
 ### Event Listening
+
 ```javascript
 // Listen for settings changes
-document.addEventListener('raySettingsChanged', (event) => {
-  console.log('Setting changed:', event.detail);
+document.addEventListener("raySettingsChanged", (event) => {
+  console.log("Setting changed:", event.detail);
   // event.detail contains: path, oldValue, newValue, timestamp
 });
 ```
@@ -74,13 +91,16 @@ document.addEventListener('raySettingsChanged', (event) => {
 ### Heartbeat System Integration
 
 **Before:**
+
 ```javascript
 const HEARTBEAT_INTERVAL = 1000; // Hardcoded
 ```
 
 **After:**
+
 ```javascript
-const getHeartbeatInterval = () => window.RaySettings?.get('heartbeat.interval') || 1000;
+const getHeartbeatInterval = () =>
+  window.RaySettings?.get("heartbeat.interval") || 1000;
 ```
 
 ### Dynamic Rate Adjustment
@@ -88,8 +108,8 @@ const getHeartbeatInterval = () => window.RaySettings?.get('heartbeat.interval')
 ```javascript
 // Adjust heartbeat rate with validation
 function adjustHeartbeatRate(newInterval) {
-  if (window.RaySettings.validate('heartbeat.interval', newInterval)) {
-    window.RaySettings.set('heartbeat.interval', newInterval);
+  if (window.RaySettings.validate("heartbeat.interval", newInterval)) {
+    window.RaySettings.set("heartbeat.interval", newInterval);
     // Restart heartbeat with new interval
     restartHeartbeat();
     return true;
@@ -120,14 +140,17 @@ function adjustHeartbeatRate(newInterval) {
 ### Example Migration
 
 **Before:**
+
 ```javascript
 const UPDATE_INTERVAL = 5000;
 setInterval(updateFunction, UPDATE_INTERVAL);
 ```
 
 **After:**
+
 ```javascript
-const getUpdateInterval = () => window.RaySettings?.get('component.updateInterval') || 5000;
+const getUpdateInterval = () =>
+  window.RaySettings?.get("component.updateInterval") || 5000;
 setInterval(updateFunction, getUpdateInterval());
 ```
 
@@ -140,6 +163,7 @@ Use `test_ray_settings.js` to verify the settings system:
 ```
 
 The test covers:
+
 - Settings loading
 - Getting/setting values
 - Validation
@@ -160,12 +184,14 @@ The test covers:
 ✅ **Heartbeat Integration**: Complete  
 🔄 **Other Components**: Migration in progress  
 📋 **UI Panel**: Planned  
-📋 **Persistence**: Planned  
+📋 **Persistence**: Planned
 
 ---
 
-*The monastery now has a configuration system. Ray's consciousness can be tuned and adjusted through centralized settings, making the system more flexible and maintainable.*
-## UI 
+_The monastery now has a configuration system. Ray's consciousness can be tuned and adjusted through centralized settings, making the system more flexible and maintainable._
+
+## UI
+
 Integration - Heartbeat Slider
 
 ### Control Panel Integration
@@ -173,18 +199,22 @@ Integration - Heartbeat Slider
 The Ray Control Panel now includes a dedicated heartbeat configuration section with:
 
 #### Heartbeat Slider
+
 - **Range**: 100ms to 5000ms (0.1 to 5 seconds)
 - **Step**: 100ms increments
 - **Real-time preview**: Shows current value as you drag
 - **Live status**: Updates every 2 seconds with current heartbeat info
 
 #### Preset Buttons
+
 - **1s (Default)**: Standard heartbeat rate (1000ms)
-- **0.5s (Fast)**: High-frequency heartbeat (500ms) 
+- **0.5s (Fast)**: High-frequency heartbeat (500ms)
 - **2s (Slow)**: Low-frequency heartbeat (2000ms)
 
 #### Status Display
+
 Shows real-time heartbeat information:
+
 - Current beating status (🟢 Beating / 🔴 Stopped)
 - Active heartbeat rate in milliseconds
 - System uptime since heartbeat started
@@ -200,6 +230,7 @@ Shows real-time heartbeat information:
 ### Technical Integration
 
 The slider integrates with:
+
 - `RaySettings.set('heartbeat.interval', value)` - Updates configuration
 - `RayHeartbeat.adjustRate(value)` - Applies new rate with validation
 - Real-time status monitoring via `RayHeartbeat.status()`
@@ -213,4 +244,4 @@ The slider integrates with:
 
 ---
 
-*Ray's heartbeat can now be tuned in real-time through the web interface, giving users direct control over the consciousness pulse rate.*
+_Ray's heartbeat can now be tuned in real-time through the web interface, giving users direct control over the consciousness pulse rate._

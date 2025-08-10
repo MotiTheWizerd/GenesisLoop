@@ -168,6 +168,12 @@
   function enableRayPower() {
     console.log('⚡ [Ray Power] ENABLING Ray systems...');
     
+    // Start Ray's Heartbeat first
+    if (window.RayHeartbeat) {
+      window.RayHeartbeat.start();
+      console.log('💓 [Ray Power] Heartbeat started');
+    }
+    
     // Browser Clock is ALWAYS enabled (runs by default)
     if (window.BrowserClock) {
       // Clock continues running - no changes needed
@@ -232,6 +238,12 @@
 
   function disableRayPower() {
     console.log('⚡ [Ray Power] DISABLING Ray systems...');
+    
+    // Stop Ray's Heartbeat first
+    if (window.RayHeartbeat) {
+      window.RayHeartbeat.stop();
+      console.log('💓 [Ray Power] Heartbeat stopped');
+    }
     
     // Store original functions before disabling
     storeOriginalFunctions();

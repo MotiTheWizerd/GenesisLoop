@@ -92,6 +92,8 @@
         "js/addons/voice-synthesis/index.js",
         "js/addons/message-cleanup/messageCleanup.js",
         "js/addons/message-cleanup/index.js",
+        "ray_agent_creation_helper.js",
+        "ray_agent_creation_chat_response.js",
         "content.js"
       ],
       "run_at": "document_end"

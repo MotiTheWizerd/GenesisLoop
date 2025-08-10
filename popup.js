@@ -136,31 +136,60 @@
   }
 
   function setupHeartbeatControls() {
-    const heartbeatSlider = document.getElementById('heartbeatSlider');
-    const heartbeatValue = document.getElementById('heartbeatValue');
+    const heartbeatInput = document.getElementById('heartbeatInput');
     
-    if (heartbeatSlider && heartbeatValue) {
-      // Update display when slider moves
-      heartbeatSlider.addEventListener('input', (e) => {
+    if (heartbeatInput) {
+      // Apply changes when input value changes
+      heartbeatInput.addEventListener('change', (e) => {
         const value = parseInt(e.target.value);
-        heartbeatValue.textContent = `${value}ms`;
+        if (value >= 1 && value <= 300) {
+          setHeartbeatInterval(value);
+        } else {
+          // Reset to valid range
+          e.target.value = Math.max(1, Math.min(300, value));
+        }
       });
       
-      // Apply changes when slider is released
-      heartbeatSlider.addEventListener('change', (e) => {
-        const value = parseInt(e.target.value);
-        setHeartbeatInterval(value);
+      // Also handle Enter key
+      heartbeatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          const value = parseInt(e.target.value);
+          if (value >= 1 && value <= 300) {
+            setHeartbeatInterval(value);
+          }
+        }
       });
     }
 
     // Heartbeat preset buttons
-    const preset500 = document.getElementById('heartbeatPreset500');
-    const preset1000 = document.getElementById('heartbeatPreset1000');
-    const preset2000 = document.getElementById('heartbeatPreset2000');
+    const presets = [
+      { id: 'heartbeatPreset1', value: 1 },
+      { id: 'heartbeatPreset5', value: 5 },
+      { id: 'heartbeatPreset15', value: 15 },
+      { id: 'heartbeatPreset30', value: 30 },
+      { id: 'heartbeatPreset60', value: 60 },
+      { id: 'heartbeatPreset120', value: 120 },
+      { id: 'heartbeatPreset300', value: 300 }
+    ];
 
-    if (preset500) preset500.addEventListener('click', () => setHeartbeatPreset(500));
-    if (preset1000) preset1000.addEventListener('click', () => setHeartbeatPreset(1000));
-    if (preset2000) preset2000.addEventListener('click', () => setHeartbeatPreset(2000));
+    presets.forEach(preset => {
+      const button = document.getElementById(preset.id);
+      if (button) {
+        button.addEventListener('click', () => setHeartbeatPreset(preset.value));
+      }
+    });
+
+    // Custom preset button
+    const customPreset = document.getElementById('heartbeatPresetCustom');
+    if (customPreset) {
+      customPreset.addEventListener('click', () => {
+        const input = document.getElementById('heartbeatInput');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      });
+    }
   }
 
   function handleMasterPowerToggle(enabled) {
@@ -188,29 +217,126 @@
     console.log(`🎛️ [Popup] ${system} ${enabled ? 'ENABLED' : 'DISABLED'}`);
   }
 
-  function setHeartbeatInterval(intervalMs) {
+  function setHeartbeatInterval(intervalSeconds) {
     sendMessageToContentScript({
       action: 'setHeartbeatInterval',
-      interval: intervalMs
+      interval: intervalSeconds
     }, (response) => {
       if (response && response.success) {
-        console.log(`💓 [Popup] Heartbeat interval set to ${intervalMs}ms`);
+        console.log(`💓 [Popup] Heartbeat interval set to ${intervalSeconds}s`);
+        
+        // Save to persistent storage
+        saveHeartbeatInterval(intervalSeconds);
+        
+        // Update active preset button styling
+        updatePresetButtonStyling(intervalSeconds);
+        
         updateHeartbeatStatus();
+        
+        // Also trigger immediate status update to show new interval
+        setTimeout(() => {
+          updateHeartbeatStatus();
+        }, 100);
       } else {
-        console.warn(`💓 [Popup] Failed to set heartbeat interval to ${intervalMs}ms`);
+        console.warn(`💓 [Popup] Failed to set heartbeat interval to ${intervalSeconds}s`);
         loadHeartbeatSettings(); // Reset to current value
       }
     });
   }
 
-  function setHeartbeatPreset(intervalMs) {
-    const slider = document.getElementById('heartbeatSlider');
-    const valueDisplay = document.getElementById('heartbeatValue');
+  function setHeartbeatPreset(intervalSeconds) {
+    const input = document.getElementById('heartbeatInput');
     
-    if (slider && valueDisplay) {
-      slider.value = intervalMs;
-      valueDisplay.textContent = `${intervalMs}ms`;
-      setHeartbeatInterval(intervalMs);
+    if (input) {
+      input.value = intervalSeconds;
+      setHeartbeatInterval(intervalSeconds);
+    }
+  }
+
+  // Persistence functions
+  function saveHeartbeatInterval(intervalSeconds) {
+    try {
+      chrome.storage.local.set({
+        'ray_heartbeat_interval': intervalSeconds,
+        'ray_heartbeat_interval_timestamp': Date.now()
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.warn('💓 [Popup] Failed to save heartbeat interval:', chrome.runtime.lastError);
+        } else {
+          console.log(`💾 [Popup] Heartbeat interval ${intervalSeconds}s saved to storage`);
+        }
+      });
+    } catch (error) {
+      console.warn('💓 [Popup] Error saving heartbeat interval:', error);
+    }
+  }
+
+  function loadSavedHeartbeatInterval() {
+    try {
+      chrome.storage.local.get(['ray_heartbeat_interval', 'ray_heartbeat_interval_timestamp'], (result) => {
+        if (chrome.runtime.lastError) {
+          console.warn('💓 [Popup] Failed to load saved heartbeat interval:', chrome.runtime.lastError);
+          return;
+        }
+
+        if (result.ray_heartbeat_interval) {
+          const savedInterval = result.ray_heartbeat_interval;
+          const savedTimestamp = result.ray_heartbeat_interval_timestamp || 0;
+          const timeSinceSave = Date.now() - savedTimestamp;
+          
+          // Only use saved value if it's recent (within 24 hours)
+          if (timeSinceSave < 24 * 60 * 60 * 1000) {
+            console.log(`📂 [Popup] Loading saved heartbeat interval: ${savedInterval}s`);
+            
+            const input = document.getElementById('heartbeatInput');
+            if (input) {
+              input.value = savedInterval;
+            }
+            
+            // Update preset button styling
+            updatePresetButtonStyling(savedInterval);
+            
+            // Apply the saved interval
+            setHeartbeatInterval(savedInterval);
+          } else {
+            console.log('💓 [Popup] Saved interval is too old, using current setting');
+          }
+        }
+      });
+    } catch (error) {
+      console.warn('💓 [Popup] Error loading saved heartbeat interval:', error);
+    }
+  }
+
+  function updatePresetButtonStyling(currentInterval) {
+    // Remove active styling from all preset buttons
+    const allPresets = document.querySelectorAll('.preset-btn');
+    allPresets.forEach(btn => {
+      btn.style.background = 'rgba(236, 72, 153, 0.1)';
+      btn.style.borderColor = 'rgba(236, 72, 153, 0.3)';
+      btn.style.color = '#ec4899';
+    });
+
+    // Add active styling to current preset
+    const presetValues = [1, 5, 15, 30, 60, 120, 300];
+    const presetIndex = presetValues.indexOf(currentInterval);
+    
+    if (presetIndex !== -1) {
+      const presetId = `heartbeatPreset${currentInterval}`;
+      const activeButton = document.getElementById(presetId);
+      if (activeButton) {
+        activeButton.style.background = 'rgba(236, 72, 153, 0.3)';
+        activeButton.style.borderColor = 'rgba(236, 72, 153, 0.6)';
+        activeButton.style.color = '#ffffff';
+      }
+    } else {
+      // Highlight custom button for non-preset values
+      const customButton = document.getElementById('heartbeatPresetCustom');
+      if (customButton) {
+        customButton.style.background = 'rgba(236, 72, 153, 0.3)';
+        customButton.style.borderColor = 'rgba(236, 72, 153, 0.6)';
+        customButton.style.color = '#ffffff';
+      }
     }
   }
 
@@ -336,17 +462,20 @@
   }
 
   function loadHeartbeatSettings() {
+    // First try to load saved settings
+    loadSavedHeartbeatInterval();
+    
+    // Then get current settings from content script
     sendMessageToContentScript({
       action: 'getHeartbeatSettings'
     }, (response) => {
       if (response && response.settings) {
-        const slider = document.getElementById('heartbeatSlider');
-        const valueDisplay = document.getElementById('heartbeatValue');
+        const input = document.getElementById('heartbeatInput');
         
-        if (slider && valueDisplay) {
-          const interval = response.settings.interval || 1000;
-          slider.value = interval;
-          valueDisplay.textContent = `${interval}ms`;
+        if (input && !input.value) { // Only set if not already set by saved settings
+          const intervalSeconds = response.settings.interval || 30;
+          input.value = intervalSeconds;
+          updatePresetButtonStyling(intervalSeconds);
         }
       }
     });
@@ -363,10 +492,10 @@
       
       if (response && response.status) {
         const status = response.status;
-        let statusText = `Status: ${status.beating ? '🟢 Beating' : '🔴 Stopped'}\n`;
-        statusText += `Current Rate: ${status.heartRate || 'Unknown'}ms\n`;
-        statusText += `Uptime: ${status.uptimeFormatted || 'N/A'}\n`;
-        statusText += `Tick Count: ${status.tickCount || 0}`;
+        let statusText = `Status: ${status.running ? '🟢 Running' : '🔴 Stopped'}\n`;
+        statusText += `Current Interval: ${status.interval || 'Unknown'}s\n`;
+        statusText += `Last Run: ${status.lastRun || 'N/A'}\n`;
+        statusText += `Responses: ${status.responseCount || 0}`;
         
         statusElement.textContent = statusText;
       } else {

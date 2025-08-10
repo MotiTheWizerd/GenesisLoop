@@ -113,13 +113,14 @@
       let result;
 
       if (processedData.type === "json") {
-        // Use FetchSender's JSON method with action routing
-        result = await window.FetchSender.sendJSON(processedData.data);
+        // Use FetchSender's JSON method with action routing (silent mode to prevent duplicate ChatGPT messages)
+        result = await window.FetchSender.sendJSON(processedData.data, { silent: true });
       } else {
-        // Use FetchSender's response method for text
+        // Use FetchSender's response method for text (silent mode to prevent duplicate ChatGPT messages)
         result = await window.FetchSender.sendResponse(
           processedData.originalResponse,
-          processedData.metadata
+          processedData.metadata,
+          { silent: true }
         );
       }
 

@@ -361,9 +361,10 @@
           timestamp: new Date().toISOString()
         };
 
-        // Use FetchSender with custom endpoint
+        // Use FetchSender with custom endpoint (silent mode to prevent ChatGPT messages)
         const result = await window.FetchSender.sendData(embeddingData, {
-          baseUrl: window.FetchSender.config.baseUrl + this.config.embeddingEndpoint
+          baseUrl: window.FetchSender.config.baseUrl + this.config.embeddingEndpoint,
+          silent: true
         });
 
         return result;
@@ -388,29 +389,88 @@
           throw new Error('FetchSender not available');
         }
 
-        const memoryEntry = {
-          content: interaction.text,
-          embedding: interaction.embedding,
-          source: `interaction_${interaction.speaker}`,
-          tags: ['interaction', interaction.speaker, interaction.metadata.type || 'general'],
-          timestamp: interaction.timestamp,
-          metadata: {
-            ...interaction.metadata,
-            interaction_id: interaction.id,
-            browser_time: interaction.browser_time,
-            temporal_source: interaction.temporal_source
-          }
+        // Format according to backend API specification
+        const memoryRequest = {
+          memories: [{
+            content: interaction.text,
+            type: 'interaction',
+            importance: interaction.speaker === 'ray' ? 'high' : 'medium',
+            tags: ['interaction', interaction.speaker, interaction.metadata.type || 'general'],
+            metadata: {
+              ...interaction.metadata,
+              interaction_id: interaction.id,
+              browser_time: interaction.browser_time,
+              temporal_source: interaction.temporal_source,
+              speaker: interaction.speaker,
+              embedding: interaction.embedding // Include embedding in metadata
+            }
+          }],
+          source: `ray_interaction_logger`,
+          timestamp: interaction.timestamp
         };
 
-        // Use FetchSender with custom endpoint
-        const result = await window.FetchSender.sendData(memoryEntry, {
-          baseUrl: window.FetchSender.config.baseUrl + this.config.memoryEndpoint
+        console.log('💾 [InteractionLogger] Sending memory request:', JSON.stringify(memoryRequest, null, 2));
+
+        // Use FetchSender with custom endpoint (silent mode to prevent ChatGPT messages)
+        const result = await window.FetchSender.sendData(memoryRequest, {
+          baseUrl: window.FetchSender.config.baseUrl + this.config.memoryEndpoint,
+          silent: true
         });
 
         return result;
         
       } catch (error) {
         console.error('❌ [InteractionLogger] Memory storage request failed:', error);
+        return {
+          success: false,
+          error: error.message
+        };
+      }
+    },
+
+    /**
+     * Store multiple interactions in a single batch request
+     * @param {Array} interactions - Array of interactions with embeddings
+     * @returns {Promise<Object>} Storage result
+     */
+    storeBatchInMemory: async function(interactions) {
+      try {
+        if (!window.FetchSender) {
+          throw new Error('FetchSender not available');
+        }
+
+        // Format according to backend API specification for batch storage
+        const memoryRequest = {
+          memories: interactions.map(interaction => ({
+            content: interaction.text,
+            type: 'interaction',
+            importance: interaction.speaker === 'ray' ? 'high' : 'medium',
+            tags: ['interaction', interaction.speaker, interaction.metadata.type || 'general'],
+            metadata: {
+              ...interaction.metadata,
+              interaction_id: interaction.id,
+              browser_time: interaction.browser_time,
+              temporal_source: interaction.temporal_source,
+              speaker: interaction.speaker,
+              embedding: interaction.embedding // Include embedding in metadata
+            }
+          })),
+          source: `ray_interaction_logger_batch`,
+          timestamp: new Date().toISOString()
+        };
+
+        console.log(`💾 [InteractionLogger] Sending batch memory request for ${interactions.length} interactions`);
+
+        // Use FetchSender with custom endpoint (silent mode to prevent ChatGPT messages)
+        const result = await window.FetchSender.sendData(memoryRequest, {
+          baseUrl: window.FetchSender.config.baseUrl + this.config.memoryEndpoint,
+          silent: true
+        });
+
+        return result;
+        
+      } catch (error) {
+        console.error('❌ [InteractionLogger] Batch memory storage request failed:', error);
         return {
           success: false,
           error: error.message

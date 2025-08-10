@@ -176,40 +176,32 @@
       color: #ffffff;
     }
 
-    .heartbeat-value {
+    .heartbeat-input {
+      width: 80px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(236, 72, 153, 0.3);
+      border-radius: 6px;
+      color: #ec4899;
       font-size: 14px;
       font-weight: 600;
-      color: #ec4899;
-    }
-
-    .heartbeat-slider {
-      width: 100%;
-      height: 6px;
-      border-radius: 3px;
-      background: rgba(255, 255, 255, 0.1);
+      text-align: center;
       outline: none;
-      -webkit-appearance: none;
-      margin-bottom: 12px;
     }
 
-    .heartbeat-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #ec4899, #be185d);
-      cursor: pointer;
-      box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4);
+    .heartbeat-input:focus {
+      border-color: rgba(236, 72, 153, 0.6);
+      box-shadow: 0 0 0 2px rgba(236, 72, 153, 0.2);
     }
 
-    .heartbeat-slider::-moz-range-thumb {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #ec4899, #be185d);
-      cursor: pointer;
-      border: none;
-      box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4);
+    .heartbeat-input::-webkit-outer-spin-button,
+    .heartbeat-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .heartbeat-input[type=number] {
+      -moz-appearance: textfield;
     }
 
     .heartbeat-presets {
@@ -491,22 +483,31 @@
       
       <div class="heartbeat-control">
         <div class="heartbeat-display">
-          <span class="heartbeat-label">Heartbeat Interval:</span>
-          <span class="heartbeat-value" id="heartbeatValue">1000ms</span>
+          <span class="heartbeat-label">Heartbeat Interval (seconds):</span>
+          <input type="number" 
+                 class="heartbeat-input" 
+                 id="heartbeatInput" 
+                 min="1" 
+                 max="300" 
+                 value="30" 
+                 step="1">
         </div>
         
-        <input type="range" 
-               class="heartbeat-slider" 
-               id="heartbeatSlider" 
-               min="100" 
-               max="5000" 
-               value="1000" 
-               step="100">
+        <div class="heartbeat-presets">
+          <button class="preset-btn" id="heartbeatPreset1">1s Ultra</button>
+          <button class="preset-btn" id="heartbeatPreset5">5s Fast</button>
+          <button class="preset-btn" id="heartbeatPreset15">15s Quick</button>
+        </div>
         
         <div class="heartbeat-presets">
-          <button class="preset-btn" id="heartbeatPreset500">0.5s Fast</button>
-          <button class="preset-btn" id="heartbeatPreset1000">1s Default</button>
-          <button class="preset-btn" id="heartbeatPreset2000">2s Slow</button>
+          <button class="preset-btn" id="heartbeatPreset30">30s Default</button>
+          <button class="preset-btn" id="heartbeatPreset60">60s Slow</button>
+          <button class="preset-btn" id="heartbeatPreset120">2m Relaxed</button>
+        </div>
+        
+        <div class="heartbeat-presets">
+          <button class="preset-btn" id="heartbeatPreset300">5m Patient</button>
+          <button class="preset-btn" id="heartbeatPresetCustom">Custom</button>
         </div>
         
         <div class="heartbeat-status" id="heartbeatStatus">

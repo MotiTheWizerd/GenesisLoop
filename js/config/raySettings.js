@@ -3,7 +3,7 @@
 
   // Ray's Core Configuration Settings
   const RAY_SETTINGS = {
-    // Heartbeat System Configuration
+    // Heartbeat System Configuration (Ray's temporal consciousness)
     heartbeat: {
       interval: 1000, // Ray's heartbeat every 1 second (1000ms)
       maxTemporalEvents: 100, // Keep last 100 temporal events
@@ -11,6 +11,14 @@
       maxInterval: 10000, // Maximum allowed heartbeat rate (10000ms)
       autoStart: true, // Start heartbeat automatically
       logEveryNTicks: 10, // Log heartbeat every N ticks to avoid spam
+    },
+
+    // Message Loop Configuration (ChatGPT message sending)
+    messageLoop: {
+      interval: 30, // Message loop interval in seconds (30s default)
+      minInterval: 1, // Minimum interval (1 second)
+      maxInterval: 300, // Maximum interval (5 minutes)
+      maxAttempts: 5, // Maximum retry attempts
     },
 
     // Clock System Configuration
@@ -113,6 +121,9 @@
 
     console.log(`⚙️ [Ray Settings] Updated ${path}: ${oldValue} → ${newValue}`);
 
+    // Save to localStorage for persistence
+    saveSettingsToStorage();
+
     // Dispatch settings change event
     if (typeof window.CustomEvent !== "undefined") {
       const settingsChangeEvent = new CustomEvent("raySettingsChanged", {
@@ -157,12 +168,71 @@
     }
   }
 
+  // Storage functions for persistence
+  function saveSettingsToStorage() {
+    try {
+      const settingsToSave = {
+        settings: RAY_SETTINGS,
+        timestamp: Date.now(),
+        version: "1.0",
+      };
+      localStorage.setItem("ray_settings", JSON.stringify(settingsToSave));
+      console.log("💾 [Ray Settings] Settings saved to localStorage");
+    } catch (error) {
+      console.warn("⚠️ [Ray Settings] Failed to save settings:", error);
+    }
+  }
+
+  function loadSettingsFromStorage() {
+    try {
+      const savedData = localStorage.getItem("ray_settings");
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        const timeSinceSave = Date.now() - (parsedData.timestamp || 0);
+
+        // Only load if saved within last 7 days
+        if (timeSinceSave < 7 * 24 * 60 * 60 * 1000 && parsedData.settings) {
+          // Merge saved settings with defaults (preserving new defaults)
+          mergeSettings(RAY_SETTINGS, parsedData.settings);
+          console.log("📂 [Ray Settings] Settings loaded from localStorage");
+          return true;
+        } else {
+          console.log(
+            "⚠️ [Ray Settings] Saved settings are too old, using defaults"
+          );
+        }
+      }
+    } catch (error) {
+      console.warn("⚠️ [Ray Settings] Failed to load settings:", error);
+    }
+    return false;
+  }
+
+  function mergeSettings(target, source) {
+    for (const key in source) {
+      if (source.hasOwnProperty(key)) {
+        if (
+          typeof source[key] === "object" &&
+          source[key] !== null &&
+          !Array.isArray(source[key])
+        ) {
+          if (!target[key] || typeof target[key] !== "object") {
+            target[key] = {};
+          }
+          mergeSettings(target[key], source[key]);
+        } else {
+          target[key] = source[key];
+        }
+      }
+    }
+  }
+
   // Initialize settings system
   function initRaySettings() {
     console.log("⚙️ [Ray Settings] Initializing Ray's configuration system...");
 
-    // Load any saved settings from storage (future enhancement)
-    // loadSettingsFromStorage();
+    // Load saved settings from storage
+    loadSettingsFromStorage();
 
     console.log("✅ [Ray Settings] Configuration system ready");
   }

@@ -15,6 +15,48 @@
     errorCount: 0,
 
     /**
+     * Get the current message loop interval in milliseconds
+     */
+    getInterval: function() {
+      const intervalSeconds = window.RaySettings?.get('messageLoop.interval') || 30;
+      return intervalSeconds * 1000; // Convert to milliseconds
+    },
+
+    /**
+     * Set the message loop interval in seconds
+     */
+    setInterval: function(intervalSeconds) {
+      if (window.RaySettings) {
+        const minInterval = window.RaySettings.get('messageLoop.minInterval') || 1;
+        const maxInterval = window.RaySettings.get('messageLoop.maxInterval') || 300;
+        
+        if (intervalSeconds >= minInterval && intervalSeconds <= maxInterval) {
+          window.RaySettings.set('messageLoop.interval', intervalSeconds);
+          console.log(`⏰ [MessageLoop] Interval set to ${intervalSeconds}s`);
+          return true;
+        } else {
+          console.warn(`⏰ [MessageLoop] Invalid interval: ${intervalSeconds}s (must be ${minInterval}-${maxInterval}s)`);
+          return false;
+        }
+      }
+      return false;
+    },
+
+    /**
+     * Get the current status of the message loop
+     */
+    getStatus: function() {
+      return {
+        running: this.isRunning,
+        interval: window.RaySettings?.get('messageLoop.interval') || 30,
+        responseCount: this.responseCount,
+        errorCount: this.errorCount,
+        lastRun: this.nextRunTime ? new Date(this.nextRunTime - this.getInterval()).toLocaleTimeString() : 'Never',
+        nextRun: this.nextRunTime ? new Date(this.nextRunTime).toLocaleTimeString() : 'N/A'
+      };
+    },
+
+    /**
      * Stop the message sending loop
      */
     stopLoop: function () {
@@ -33,6 +75,7 @@
       if (typeof window.RayLoopStatus !== "undefined") {
         window.RayLoopStatus.setRunning(false);
         window.RayLoopStatus.setStatus('Stopped');
+        window.RayLoopStatus.setNextRun(null); // Clear next run time
       }
       
       console.log("⏹️ Response-driven loop stopped.");
@@ -234,7 +277,8 @@
                     // Continue the loop
                     if (self.isRunning) {
                       console.log("🔄 Scheduling next message...");
-                      self.nextRunTime = Date.now() + 1000;
+                      const intervalMs = self.getInterval();
+                      self.nextRunTime = Date.now() + intervalMs;
                       
                       // Update status display
                       if (typeof window.RayLoopStatus !== "undefined") {
@@ -244,7 +288,7 @@
                       
                       setTimeout(() => {
                         self.sendMessageAndWaitForResponse();
-                      }, 1000);
+                      }, intervalMs);
                     }
                   }
                 );
@@ -324,9 +368,10 @@
                     // Continue the loop
                     if (self.isRunning) {
                       console.log("🔄 Scheduling next message...");
+                      const intervalMs = self.getInterval();
                       setTimeout(() => {
                         self.sendMessageAndWaitForResponse();
-                      }, 1000);
+                      }, intervalMs);
                     }
                   }
                 );
@@ -394,9 +439,10 @@
                   // Continue the loop
                   if (self.isRunning) {
                     console.log("🔄 Scheduling next message...");
+                    const intervalMs = self.getInterval();
                     setTimeout(() => {
                       self.sendMessageAndWaitForResponse();
-                    }, 1000);
+                    }, intervalMs);
                   }
                 }
               );
@@ -469,13 +515,15 @@
         // Check if this is a reflect action response - if so, stop the heartbeat
         try {
           const jsonData = JSON.parse(response);
-          if (jsonData && jsonData.action === "reflect") {
+          // Only stop for explicit reflect actions, not heartbeat responses
+          if (jsonData && jsonData.action === "reflect" && jsonData.type !== "heartbeat") {
             console.log(
               "🧠 REFLECT ACTION DETECTED! Stopping heartbeat loop to prevent overwriting reflection."
             );
             console.log(
               "💭 Reflection content will remain in input field for manual review/sending."
             );
+            console.log("📊 Response data:", JSON.stringify(jsonData, null, 2));
             self.stopLoop();
 
             // Update toggle button to show stopped state
@@ -484,6 +532,8 @@
             }
 
             return; // Exit early - don't schedule next message
+          } else if (jsonData && jsonData.type === "heartbeat") {
+            console.log("💓 Heartbeat response received, continuing loop");
           }
         } catch (parseError) {
           console.log("⚠️ Response is not JSON, continuing normal loop");
@@ -492,10 +542,19 @@
         // Send the next message after a short delay (ONLY after response)
         if (self.isRunning) {
           console.log("⏳ Scheduling next message in continuing loop...");
+          const intervalMs = self.getInterval();
+          self.nextRunTime = Date.now() + intervalMs;
+          
+          // Update status display
+          if (typeof window.RayLoopStatus !== "undefined") {
+            window.RayLoopStatus.setNextRun(self.nextRunTime);
+            window.RayLoopStatus.setStatus('Waiting');
+          }
+          
           setTimeout(() => {
             console.log("🔄 Sending next message in continuing loop");
             self.sendMessageAndWaitForResponse();
-          }, 1000); // Small delay before sending next message
+          }, intervalMs); // Use configurable delay
         } else {
           console.log("⚠️ Continuing loop is not running");
         }
@@ -585,7 +644,7 @@
                       if (self.isRunning) {
                         self.sendMessageAndWaitForResponse();
                       }
-                    }, 1000);
+                    }, 5000); // 5 second retry delay
                   }
                 },
                 true // Skip MessageSender's response handling - MessageLoop will handle it
@@ -640,7 +699,7 @@
                       if (self.isRunning) {
                         self.sendMessageAndWaitForResponse();
                       }
-                    }, 1000);
+                    }, 5000); // 5 second retry delay
                   }
                 },
                 true
@@ -674,7 +733,7 @@
                     if (self.isRunning) {
                       self.sendMessageAndWaitForResponse();
                     }
-                  }, 1000);
+                  }, 5000); // 5 second retry delay
                 }
               },
               true
@@ -706,7 +765,7 @@
                 if (self.isRunning) {
                   self.sendMessageAndWaitForResponse();
                 }
-              }, 1000);
+              }, 5000); // 5 second retry delay
             }
           },
           true
